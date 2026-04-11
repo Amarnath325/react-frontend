@@ -1,27 +1,66 @@
 import React from 'react';
-import BackendStatus from './components/BackendStatus';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Students from './pages/Students';
+import SchoolRegistration from './pages/SchoolRegistration';
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/register" />} />
+      <Route path="/register" element={<SchoolRegistration />} />
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/students"
+        element={
+          <ProtectedRoute>
+            <Students />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="container mx-auto px-4 py-16">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">
-            🎉 React + Laravel Setup
-          </h1>
-          <p className="text-gray-600 text-center">
-            Frontend: React + TypeScript + Tailwind
-          </p>
-          <p className="text-gray-600 text-center mb-6">
-            Backend: Laravel API
-          </p>
-          <button className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200">
-            Connect to Backend
-          </button>
-          <BackendStatus />
-        </div>
-      </div>
-    </div>
+    <Router>
+      <AuthProvider>
+        <Toaster position="top-right" />
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 
