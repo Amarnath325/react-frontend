@@ -25,6 +25,34 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// function AppContent() {
+//   const { isAuthenticated } = useAuth();
+
+//   return (
+//     <Routes>
+//       <Route path="/" element={<Navigate to="/register" />} />
+//       <Route path="/register" element={<SchoolRegistration />} />
+//       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+//       <Route
+//         path="/dashboard"
+//         element={
+//           <ProtectedRoute>
+//             <Dashboard />
+//           </ProtectedRoute>
+//         }
+//       />
+//       <Route
+//         path="/students"
+//         element={
+//           <ProtectedRoute>
+//             <Students />
+//           </ProtectedRoute>
+//         }
+//       />
+//     </Routes>
+//   );
+// }
+
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
@@ -33,22 +61,8 @@ function AppContent() {
       <Route path="/" element={<Navigate to="/register" />} />
       <Route path="/register" element={<SchoolRegistration />} />
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/students"
-        element={
-          <ProtectedRoute>
-            <Students />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
     </Routes>
   );
 }

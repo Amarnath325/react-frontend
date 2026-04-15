@@ -1,181 +1,247 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
+// Types
 interface SchoolFormData {
-  // School Information
-  business_name: string;
-  email: string;
-  phone: string;
-  mobile: string;
-  website: string;
+  // Basic School Information
+  school_name: string;
+  school_code: string;
   established_year: string;
-  affiliation_board: string;
   school_type: string;
-  gender_type: string;
+  management_type: string;
   
-  // Address
-  address: string;
-  city: string;
-  state: string;
+  // Location Details
   country: string;
+  state: string;
+  city: string;
   pincode: string;
+  full_address: string;
+  latitude: string;
+  longitude: string;
   
-  // Admin Information
-  admin_name: string;
-  admin_email: string;
-  admin_phone: string;
-  admin_password: string;
-  admin_password_confirmation: string;
+  // Contact Details
+  contact_number: string;
+  email: string;
+  website: string;
+  
+  // Affiliation Details
+  affiliation_board: string;
+  affiliation_number: string;
+  affiliation_status: string;
+  
+  // Academic Structure
+  classes_available: string[];
+  streams_available: string[];
+  medium_of_instruction: string[];
+  
+  // Infrastructure Details
+  has_labs: boolean;
+  has_library: boolean;
+  has_sports: boolean;
+  has_hostel: boolean;
+  has_transport: boolean;
+  
+  // Subscription Plan
+  subscription_plan: string;
+  
+  // About School
+  about_school: string;
 }
 
 const SchoolRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [affiliationFile, setAffiliationFile] = useState<File | null>(null);
+  const [registrationFile, setRegistrationFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const affiliationInputRef = useRef<HTMLInputElement>(null);
+  const registrationInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState<SchoolFormData>({
-    business_name: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    website: '',
+    school_name: '',
+    school_code: '',
     established_year: '',
-    affiliation_board: 'CBSE',
     school_type: 'day',
-    gender_type: 'coed',
-    address: '',
-    city: '',
-    state: '',
+    management_type: 'private',
     country: 'India',
+    state: '',
+    city: '',
     pincode: '',
-    admin_name: '',
-    admin_email: '',
-    admin_phone: '',
-    admin_password: '',
-    admin_password_confirmation: '',
+    full_address: '',
+    latitude: '',
+    longitude: '',
+    contact_number: '',
+    email: '',
+    website: '',
+    affiliation_board: 'CBSE',
+    affiliation_number: '',
+    affiliation_status: 'pending',
+    classes_available: [],
+    streams_available: [],
+    medium_of_instruction: ['english'],
+    has_labs: false,
+    has_library: false,
+    has_sports: false,
+    has_hostel: false,
+    has_transport: false,
+    subscription_plan: 'free',
+    about_school: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleMultiSelect = (name: string, value: string) => {
+    setFormData(prev => {
+      const currentValues = prev[name as keyof SchoolFormData] as string[];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+      
+      return {
+        ...prev,
+        [name]: newValues
+      };
+    });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (type === 'logo') {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else if (type === 'affiliation') {
+      setAffiliationFile(file);
+    } else if (type === 'registration') {
+      setRegistrationFile(file);
+    }
+  };
+
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setGalleryFiles([...galleryFiles, ...files]);
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setGalleryPreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (formData.admin_password !== formData.admin_password_confirmation) {
-      toast.error('Passwords do not match!');
-      return;
-    }
-
-    if (formData.admin_password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
     setLoading(true);
     
     try {
-      const response = await api.post('/register', formData);
+      const submitData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          submitData.append(key, JSON.stringify(value));
+        } else if (typeof value === 'boolean') {
+          submitData.append(key, value ? '1' : '0');
+        } else {
+          submitData.append(key, String(value));
+        }
+      });
+      
+      if (logoFile) submitData.append('logo', logoFile);
+      if (affiliationFile) submitData.append('affiliation_certificate', affiliationFile);
+      if (registrationFile) submitData.append('registration_certificate', registrationFile);
+      galleryFiles.forEach(file => {
+        submitData.append('gallery_images[]', file);
+      });
+      
+      const response = await api.post('/school/register', submitData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
       if (response.data) {
         toast.success('School registered successfully!');
-        
-        // Auto login after registration
-        const loginResponse = await api.post('/login', {
-          email: formData.admin_email,
-          password: formData.admin_password,
-        });
-        
-        if (loginResponse.data.access_token) {
-          localStorage.setItem('auth_token', loginResponse.data.access_token);
-          localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
-          toast.success('Logged in successfully!');
-          
-          // Redirect to dashboard after 2 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 2000);
-        }
+        setTimeout(() => navigate('/login'), 2000);
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(error.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const nextStep = () => {
-    setCurrentStep(currentStep + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const prevStep = () => {
-    setCurrentStep(currentStep - 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const nextStep = () => setCurrentStep(prev => prev + 1);
+  const prevStep = () => setCurrentStep(prev => prev - 1);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
             </svg>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Start Your School Journey
-          </h1>
-          <p className="text-lg text-gray-600">
-            Join thousands of schools using our management system
-          </p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">School Registration</h1>
+          <p className="text-gray-600 mt-2">Join our platform and manage your school efficiently</p>
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                1
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex min-w-max">
+            {[
+              'Basic Info', 'Location', 'Contact', 'Affiliation', 
+              'Academic', 'Infrastructure', 'Subscription', 'Documents'
+            ].map((label, index) => (
+              <div key={index} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                    currentStep > index + 1 ? 'bg-green-500 text-white' :
+                    currentStep === index + 1 ? 'bg-blue-600 text-white ring-4 ring-blue-200' :
+                    'bg-gray-300 text-gray-600'
+                  }`}>
+                    {currentStep > index + 1 ? '✓' : index + 1}
+                  </div>
+                  <span className="text-xs mt-1 text-gray-600 hidden sm:block">{label}</span>
+                </div>
+                {index < 7 && <div className={`w-12 h-1 mx-2 ${currentStep > index + 1 ? 'bg-green-500' : 'bg-gray-300'}`}></div>}
               </div>
-              <div className={`flex-1 h-1 mx-2 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-            </div>
-            <div className="flex-1 flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                2
-              </div>
-              <div className={`flex-1 h-1 mx-2 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-            </div>
-            <div className="flex-1 flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                3
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
-            <span>School Info</span>
-            <span>Contact Details</span>
-            <span>Admin Account</span>
+            ))}
           </div>
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <form onSubmit={handleSubmit}>
-            <div className="p-8">
-              {/* Step 1: School Information */}
+        <form onSubmit={handleSubmit}>
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-6 sm:p-8">
+              
+              {/* Step 1: Basic School Information */}
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">School Information</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">🏫</span> Basic School Information
+                  </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -184,73 +250,30 @@ const SchoolRegistration: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        name="business_name"
-                        value={formData.business_name}
+                        name="school_name"
+                        value={formData.school_name}
                         onChange={handleChange}
                         required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="e.g., Delhi Public School"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address <span className="text-red-500">*</span>
+                        School Code/ID <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
+                        type="text"
+                        name="school_code"
+                        value={formData.school_code}
                         onChange={handleChange}
                         required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="school@example.com"
+                        placeholder="e.g., DPS2024"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="0120-1234567"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Mobile Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        name="mobile"
-                        value={formData.mobile}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="9876543210"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Website
-                      </label>
-                      <input
-                        type="url"
-                        name="website"
-                        value={formData.website}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://www.school.com"
-                      />
-                    </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Established Year
@@ -266,96 +289,64 @@ const SchoolRegistration: React.FC = () => {
                         max="2024"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Affiliation Board
-                      </label>
-                      <select
-                        name="affiliation_board"
-                        value={formData.affiliation_board}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="CBSE">CBSE</option>
-                        <option value="ICSE">ICSE</option>
-                        <option value="State Board">State Board</option>
-                        <option value="IB">IB</option>
-                        <option value="Cambridge">Cambridge</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        School Type
+                        School Type <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="school_type"
                         value={formData.school_type}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="day">Day School</option>
                         <option value="boarding">Boarding School</option>
                         <option value="day_boarding">Day & Boarding</option>
                       </select>
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gender Type
+                        Management Type
                       </label>
                       <select
-                        name="gender_type"
-                        value={formData.gender_type}
+                        name="management_type"
+                        value={formData.management_type}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="coed">Co-Educational</option>
-                        <option value="boys">Boys Only</option>
-                        <option value="girls">Girls Only</option>
+                        <option value="private">Private</option>
+                        <option value="government">Government</option>
+                        <option value="aided">Aided</option>
                       </select>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Address Details */}
+              {/* Step 2: Location Details */}
               {currentStep === 2 && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Address Details</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">📍</span> Location Details
+                  </h2>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      required
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter complete address"
-                    />
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City <span className="text-red-500">*</span>
+                        Country
                       </label>
                       <input
                         type="text"
-                        name="city"
-                        value={formData.city}
+                        name="country"
+                        value={formData.country}
                         onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="New Delhi"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        readOnly
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         State <span className="text-red-500">*</span>
@@ -366,29 +357,29 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.state}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Delhi"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., Delhi"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Country <span className="text-red-500">*</span>
+                        City/District <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        name="country"
-                        value={formData.country}
+                        name="city"
+                        value={formData.city}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="India"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., New Delhi"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pincode <span className="text-red-500">*</span>
+                        Pin Code <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -396,193 +387,500 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.pincode}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         placeholder="110001"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Address <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        name="full_address"
+                        value={formData.full_address}
+                        onChange={handleChange}
+                        required
+                        rows={3}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Complete address with landmark"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Latitude (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="latitude"
+                        value={formData.latitude}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="28.6139"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Longitude (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="longitude"
+                        value={formData.longitude}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="77.2090"
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 3: Admin Account */}
+              {/* Step 3: Contact Details */}
               {currentStep === 3 && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Account Setup</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">📞</span> Contact Details
+                  </h2>
                   
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-blue-800">
-                      This account will have full access to manage your school. Please keep credentials secure.
-                    </p>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Admin Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="admin_name"
-                        value={formData.admin_name}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="John Doe"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Admin Email <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        name="admin_email"
-                        value={formData.admin_email}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="admin@school.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Admin Phone <span className="text-red-500">*</span>
+                        School Contact Number <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="tel"
-                        name="admin_phone"
-                        value={formData.admin_phone}
+                        name="contact_number"
+                        value={formData.contact_number}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="9876543210"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="011-12345678"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Password <span className="text-red-500">*</span>
+                        Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="password"
-                        name="admin_password"
-                        value={formData.admin_password}
+                        type="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Minimum 6 characters"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="school@example.com"
                       />
                     </div>
-
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm Password <span className="text-red-500">*</span>
+                        Website (Optional)
                       </label>
                       <input
-                        type="password"
-                        name="admin_password_confirmation"
-                        value={formData.admin_password_confirmation}
+                        type="url"
+                        name="website"
+                        value={formData.website}
                         onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Confirm password"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="https://www.school.com"
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Affiliation Details */}
+              {currentStep === 4 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">📘</span> Affiliation Details
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Affiliation Board
+                      </label>
+                      <select
+                        name="affiliation_board"
+                        value={formData.affiliation_board}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="CBSE">CBSE - Central Board of Secondary Education</option>
+                        <option value="ICSE">ICSE - Council for Indian School Certificate</option>
+                        <option value="State Board">State Board</option>
+                        <option value="IB">IB - International Baccalaureate</option>
+                        <option value="Cambridge">Cambridge International</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Affiliation Number
+                      </label>
+                      <input
+                        type="text"
+                        name="affiliation_number"
+                        value={formData.affiliation_number}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="e.g., 2130124"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Affiliation Status
+                      </label>
+                      <select
+                        name="affiliation_status"
+                        value={formData.affiliation_status}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="expired">Expired</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Academic Structure */}
+              {currentStep === 5 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">🎓</span> Academic Structure
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Classes Available
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {['Nursery', 'KG', '1-5', '6-8', '9-10', '11-12'].map(cls => (
+                          <button
+                            key={cls}
+                            type="button"
+                            onClick={() => handleMultiSelect('classes_available', cls)}
+                            className={`px-3 py-2 text-sm rounded-lg border transition ${
+                              formData.classes_available.includes(cls)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {cls}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Streams Available (11-12)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {['Science', 'Commerce', 'Arts', 'Vocational'].map(stream => (
+                          <button
+                            key={stream}
+                            type="button"
+                            onClick={() => handleMultiSelect('streams_available', stream)}
+                            className={`px-3 py-2 text-sm rounded-lg border transition ${
+                              formData.streams_available.includes(stream)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {stream}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Medium of Instruction
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Other'].map(medium => (
+                          <button
+                            key={medium}
+                            type="button"
+                            onClick={() => handleMultiSelect('medium_of_instruction', medium.toLowerCase())}
+                            className={`px-3 py-2 text-sm rounded-lg border transition ${
+                              formData.medium_of_instruction.includes(medium.toLowerCase())
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {medium}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 6: Infrastructure Details */}
+              {currentStep === 6 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">🏢</span> Infrastructure Details
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { key: 'has_labs', label: '🧪 Labs Available' },
+                      { key: 'has_library', label: '📚 Library Available' },
+                      { key: 'has_sports', label: '⚽ Sports Facilities' },
+                      { key: 'has_hostel', label: '🏠 Hostel Facility' },
+                      { key: 'has_transport', label: '🚌 Transport Facility' },
+                    ].map(facility => (
+                      <label key={facility.key} className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          name={facility.key}
+                          checked={formData[facility.key as keyof SchoolFormData] as boolean}
+                          onChange={handleChange}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-gray-700">{facility.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 7: Subscription Plan */}
+              {currentStep === 7 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">💳</span> Subscription Plan
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                      { value: 'free', name: 'Free', price: '₹0', features: ['Basic Features', 'Up to 100 Students', 'Email Support'] },
+                      { value: 'basic', name: 'Basic', price: '₹999/mo', features: ['All Free Features', 'Up to 500 Students', 'Priority Support', 'Reports'] },
+                      { value: 'premium', name: 'Premium', price: '₹2499/mo', features: ['All Basic Features', 'Unlimited Students', '24/7 Support', 'Advanced Analytics', 'SMS Integration'] },
+                    ].map(plan => (
+                      <label
+                        key={plan.value}
+                        className={`relative p-6 border-2 rounded-xl cursor-pointer transition-all ${
+                          formData.subscription_plan === plan.value
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="subscription_plan"
+                          value={plan.value}
+                          checked={formData.subscription_plan === plan.value}
+                          onChange={handleChange}
+                          className="absolute top-4 right-4 w-4 h-4 text-blue-600"
+                        />
+                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">{plan.price}</p>
+                        <ul className="mt-4 space-y-2">
+                          {plan.features.map(feature => (
+                            <li key={feature} className="text-sm text-gray-600 flex items-center gap-2">
+                              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 8: Documents & Media Upload */}
+              {currentStep === 8 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-blue-600">📄</span> Documents & Media
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Logo Upload */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <input
+                        type="file"
+                        ref={logoInputRef}
+                        onChange={(e) => handleFileUpload(e, 'logo')}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      {logoPreview ? (
+                        <div className="space-y-3">
+                          <img src={logoPreview} alt="Logo" className="w-32 h-32 object-contain mx-auto" />
+                          <button
+                            type="button"
+                            onClick={() => logoInputRef.current?.click()}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            Change Logo
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          className="space-y-2"
+                        >
+                          <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-600">Upload School Logo</p>
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Gallery Images */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <input
+                        type="file"
+                        ref={galleryInputRef}
+                        onChange={handleGalleryUpload}
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="space-y-2"
+                      >
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-600">Upload Gallery Images</p>
+                        <p className="text-xs text-gray-400">Multiple images allowed</p>
+                      </button>
+                      {galleryPreviews.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {galleryPreviews.map((preview, idx) => (
+                            <img key={idx} src={preview} alt={`Gallery ${idx}`} className="w-16 h-16 object-cover rounded" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Affiliation Certificate */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <input
+                        type="file"
+                        ref={affiliationInputRef}
+                        onChange={(e) => handleFileUpload(e, 'affiliation')}
+                        accept=".pdf,.jpg,.png"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => affiliationInputRef.current?.click()}
+                        className="space-y-2"
+                      >
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-600">Affiliation Certificate</p>
+                        {affiliationFile && <p className="text-xs text-green-600">✓ File selected</p>}
+                      </button>
+                    </div>
+                    
+                    {/* Registration Certificate */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <input
+                        type="file"
+                        ref={registrationInputRef}
+                        onChange={(e) => handleFileUpload(e, 'registration')}
+                        accept=".pdf,.jpg,.png"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => registrationInputRef.current?.click()}
+                        className="space-y-2"
+                      >
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-600">School Registration Certificate</p>
+                        {registrationFile && <p className="text-xs text-green-600">✓ File selected</p>}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* About School */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      About School
+                    </label>
+                    <textarea
+                      name="about_school"
+                      value={formData.about_school}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Tell us about your school's mission, vision, achievements..."
+                    />
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Form Actions */}
-            <div className="px-8 py-6 bg-gray-50 border-t border-gray-200 flex justify-between">
+            
+            {/* Navigation Buttons */}
+            <div className="px-6 sm:px-8 py-6 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between gap-4">
               {currentStep > 1 && (
                 <button
                   type="button"
                   onClick={prevStep}
                   className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
                 >
-                  Previous
+                  ← Previous
                 </button>
               )}
               
-              {currentStep < 3 ? (
+              {currentStep < 8 ? (
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition ${currentStep === 1 ? 'w-full sm:w-auto' : 'sm:ml-auto'}`}
                 >
-                  Next Step
+                  Next Step →
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={loading}
-                  className="ml-auto px-8 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50"
+                  className="px-8 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition disabled:opacity-50"
                 >
-                  {loading ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Registering...
-                    </span>
-                  ) : (
-                    'Register School'
-                  )}
+                  {loading ? 'Registering...' : '✓ Complete Registration'}
                 </button>
               )}
             </div>
-          </form>
-        </div>
-
-        {/* Features Section */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 text-center shadow-md">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure & Safe</h3>
-            <p className="text-gray-600">Your data is encrypted and stored securely</p>
           </div>
-
-          <div className="bg-white rounded-xl p-6 text-center shadow-md">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Quick Setup</h3>
-            <p className="text-gray-600">Get started in minutes with easy onboarding</p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 text-center shadow-md">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mb-4">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">24/7 Support</h3>
-            <p className="text-gray-600">Dedicated support team always available</p>
-          </div>
-        </div>
-
-        {/* Login Link */}
-        <div className="text-center mt-8">
-          <p className="text-gray-600">
-            Already have an account?{' '}
-            <button
-              onClick={() => navigate('/login')}
-              className="text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              Login here
-            </button>
-          </p>
-        </div>
+        </form>
       </div>
     </div>
   );
