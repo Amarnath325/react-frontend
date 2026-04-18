@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { masterService } from '../services/master';
+import type { MasterOption } from '../services/master';
 
 // Types
 interface SchoolFormData {
@@ -18,8 +20,6 @@ interface SchoolFormData {
   city: string;
   pincode: string;
   full_address: string;
-  latitude: string;
-  longitude: string;
   
   // Contact Details
   contact_number: string;
@@ -54,6 +54,7 @@ const SchoolRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingMaster, setLoadingMaster] = useState(true);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [affiliationFile, setAffiliationFile] = useState<File | null>(null);
@@ -61,33 +62,42 @@ const SchoolRegistration: React.FC = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   
+  // Master Data States
+  const [schoolTypes, setSchoolTypes] = useState<MasterOption[]>([]);
+  const [managementTypes, setManagementTypes] = useState<MasterOption[]>([]);
+  const [affiliationBoards, setAffiliationBoards] = useState<MasterOption[]>([]);
+  const [affiliationStatuses, setAffiliationStatuses] = useState<MasterOption[]>([]);
+  const [classes, setClasses] = useState<MasterOption[]>([]);
+  const [streams, setStreams] = useState<MasterOption[]>([]);
+  const [mediums, setMediums] = useState<MasterOption[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<MasterOption[]>([]);
+  
   const logoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const affiliationInputRef = useRef<HTMLInputElement>(null);
   const registrationInputRef = useRef<HTMLInputElement>(null);
+  const toastShownRef = useRef<string>('');
   
   const [formData, setFormData] = useState<SchoolFormData>({
     school_name: '',
     school_code: '',
     established_year: '',
-    school_type: 'day',
-    management_type: 'private',
+    school_type: '',
+    management_type: '',
     country: 'India',
     state: '',
     city: '',
     pincode: '',
     full_address: '',
-    latitude: '',
-    longitude: '',
     contact_number: '',
     email: '',
     website: '',
-    affiliation_board: 'CBSE',
+    affiliation_board: '',
     affiliation_number: '',
-    affiliation_status: 'pending',
+    affiliation_status: '',
     classes_available: [],
     streams_available: [],
-    medium_of_instruction: ['english'],
+    medium_of_instruction: [],
     has_labs: false,
     has_library: false,
     has_sports: false,
@@ -97,6 +107,62 @@ const SchoolRegistration: React.FC = () => {
     about_school: '',
   });
 
+  // Fetch all master data on component mount
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      setLoadingMaster(true);
+      try {
+        // Fetch all master data in parallel with safe handling
+        const [
+          schoolTypesRes,
+          managementTypesRes,
+          affiliationBoardsRes,
+          affiliationStatusesRes,
+          classesRes,
+          streamsRes,
+          mediumsRes,
+          subscriptionPlansRes,
+        ] = await Promise.all([
+          masterService.getSchoolTypes(),
+          masterService.getManagementTypes(),
+          masterService.getAffiliationBoards(),
+          masterService.getAffiliationStatuses(),
+          masterService.getClasses(),
+          masterService.getStreams(),
+          masterService.getMediums(),
+          masterService.getSubscriptionPlans(),
+        ]);
+        
+        // Ensure we're setting arrays
+        setSchoolTypes(Array.isArray(schoolTypesRes) ? schoolTypesRes : []);
+        setManagementTypes(Array.isArray(managementTypesRes) ? managementTypesRes : []);
+        setAffiliationBoards(Array.isArray(affiliationBoardsRes) ? affiliationBoardsRes : []);
+        setAffiliationStatuses(Array.isArray(affiliationStatusesRes) ? affiliationStatusesRes : []);
+        setClasses(Array.isArray(classesRes) ? classesRes : []);
+        setStreams(Array.isArray(streamsRes) ? streamsRes : []);
+        setMediums(Array.isArray(mediumsRes) ? mediumsRes : []);
+        setSubscriptionPlans(Array.isArray(subscriptionPlansRes) ? subscriptionPlansRes : []);
+        
+      } catch (error) {
+        console.error('Error fetching master data:', error);
+        toast.error('Failed to load form data');
+        // Set empty arrays to prevent errors
+        setSchoolTypes([]);
+        setManagementTypes([]);
+        setAffiliationBoards([]);
+        setAffiliationStatuses([]);
+        setClasses([]);
+        setStreams([]);
+        setMediums([]);
+        setSubscriptionPlans([]);
+      } finally {
+        setLoadingMaster(false);
+      }
+    };
+    
+    fetchMasterData();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -105,6 +171,51 @@ const SchoolRegistration: React.FC = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let { value } = e.target;
+    
+    // Only allow digits - remove any non-numeric characters
+    value = value.replace(/[^0-9]/g, '');
+    
+    // Limit to 4 digits
+    if (value.length > 4) {
+      value = value.slice(0, 4);
+    }
+    
+    // Update form data
+    setFormData(prev => ({
+      ...prev,
+      established_year: value
+    }));
+    
+    // Show validation error only when exactly 4 digits are entered
+    if (value.length === 4) {
+      const year = parseInt(value);
+      const currentYear = new Date().getFullYear();
+      
+      // Check if year is less than 1800
+      if (year < 1800) {
+        if (toastShownRef.current !== 'year-validation-min') {
+          toast.error('Year must be 1800 or later');
+          toastShownRef.current = 'year-validation-min';
+          setTimeout(() => {
+            toastShownRef.current = '';
+          }, 3000);
+        }
+      }
+      // Check if year is greater than current year
+      else if (year > currentYear) {
+        if (toastShownRef.current !== 'year-validation-max') {
+          toast.error(`Year cannot be greater than ${currentYear}`);
+          toastShownRef.current = 'year-validation-max';
+          setTimeout(() => {
+            toastShownRef.current = '';
+          }, 3000);
+        }
+      }
+    }
   };
 
   const handleMultiSelect = (name: string, value: string) => {
@@ -152,6 +263,13 @@ const SchoolRegistration: React.FC = () => {
     });
   };
 
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // Prevent form submission on Enter key unless we're on the final step
+    if (e.key === 'Enter' && currentStep < 8) {
+      e.preventDefault();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -160,7 +278,10 @@ const SchoolRegistration: React.FC = () => {
       const submitData = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (Array.isArray(value)) {
-          submitData.append(key, JSON.stringify(value));
+          // Send arrays with bracket notation (e.g., classes_available[], classes_available[])
+          value.forEach(item => {
+            submitData.append(`${key}[]`, item);
+          });
         } else if (typeof value === 'boolean') {
           submitData.append(key, value ? '1' : '0');
         } else {
@@ -181,7 +302,7 @@ const SchoolRegistration: React.FC = () => {
       
       if (response.data) {
         toast.success('School registered successfully!');
-        setTimeout(() => navigate('/login'), 2000);
+        setTimeout(() => navigate('/dashboard'), 2000);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -190,8 +311,95 @@ const SchoolRegistration: React.FC = () => {
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => prev + 1);
-  const prevStep = () => setCurrentStep(prev => prev - 1);
+  const validateStep = (): boolean => {
+    const errors: string[] = [];
+
+    switch (currentStep) {
+      case 1: // Basic Info
+        if (!formData.school_name.trim()) errors.push('School Name is required');
+        if (!formData.school_code.trim()) errors.push('School Code is required');
+        if (!formData.school_type.trim()) errors.push('School Type is required');
+        if (!formData.management_type.trim()) errors.push('Management Type is required');
+        break;
+      
+      case 2: // Location
+        if (!formData.state.trim()) errors.push('State is required');
+        if (!formData.city.trim()) errors.push('City is required');
+        if (!formData.pincode.trim()) errors.push('Pin Code is required');
+        if (!formData.full_address.trim()) errors.push('Full Address is required');
+        break;
+      
+      case 3: // Contact
+        if (!formData.contact_number.trim()) errors.push('Contact Number is required');
+        if (!formData.email.trim()) errors.push('Email is required');
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          errors.push('Valid Email is required');
+        }
+        break;
+      
+      case 4: // Affiliation
+        if (!formData.affiliation_board.trim()) errors.push('Affiliation Board is required');
+        if (!formData.affiliation_number.trim()) errors.push('Affiliation Number is required');
+        if (!formData.affiliation_status.trim()) errors.push('Affiliation Status is required');
+        break;
+      
+      case 5: // Academic
+        if (formData.classes_available.length === 0) errors.push('Select at least one class');
+        if (formData.medium_of_instruction.length === 0) errors.push('Select at least one medium');
+        break;
+      
+      case 6: // Infrastructure
+        // Optional step
+        break;
+      
+      case 7: // Subscription
+        if (!formData.subscription_plan.trim()) errors.push('Select a subscription plan');
+        break;
+      
+      case 8: // Documents
+        // Optional step but validates at submit
+        break;
+    }
+
+    if (errors.length > 0) {
+      // Show only the first error message and check if it's a duplicate
+      const errorKey = `step-${currentStep}-${errors[0]}`;
+      if (toastShownRef.current !== errorKey) {
+        toast.error(errors[0]);
+        toastShownRef.current = errorKey;
+        // Clear the flag after 3 seconds to allow showing same error again if user retries
+        setTimeout(() => {
+          toastShownRef.current = '';
+        }, 3000);
+      }
+      return false;
+    }
+
+    return true;
+  };
+
+  const nextStep = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    if (e) e.preventDefault();
+    if (validateStep()) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const prevStep = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    if (e) e.preventDefault();
+    setCurrentStep(prev => prev - 1);
+  };
+
+  if (loadingMaster) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading form data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -232,7 +440,7 @@ const SchoolRegistration: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} noValidate>
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="p-6 sm:p-8">
               
@@ -269,7 +477,7 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.school_code}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         placeholder="e.g., DPS2024"
                       />
                     </div>
@@ -279,14 +487,13 @@ const SchoolRegistration: React.FC = () => {
                         Established Year
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         name="established_year"
                         value={formData.established_year}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onChange={handleYearChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="2024"
-                        min="1900"
-                        max="2024"
+                        maxLength={4}
                       />
                     </div>
                     
@@ -298,27 +505,30 @@ const SchoolRegistration: React.FC = () => {
                         name="school_type"
                         value={formData.school_type}
                         onChange={handleChange}
+                        required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="day">Day School</option>
-                        <option value="boarding">Boarding School</option>
-                        <option value="day_boarding">Day & Boarding</option>
+                        <option value="">Select School Type</option>
+                        {Array.isArray(schoolTypes) && schoolTypes.map((type) => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
                       </select>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Management Type
+                        Management Type <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="management_type"
                         value={formData.management_type}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                       >
-                        <option value="private">Private</option>
-                        <option value="government">Government</option>
-                        <option value="aided">Aided</option>
+                        <option value="">Select Management Type</option>
+                        {Array.isArray(managementTypes) && managementTypes.map((type) => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -357,7 +567,9 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.state}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        minLength={3}
+                        maxLength={20}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="e.g., Delhi"
                       />
                     </div>
@@ -372,7 +584,9 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.city}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        minLength={3}
+                        maxLength={20}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="e.g., New Delhi"
                       />
                     </div>
@@ -387,7 +601,9 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.pincode}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        minLength={6}
+                        maxLength={6}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="110001"
                       />
                     </div>
@@ -402,36 +618,8 @@ const SchoolRegistration: React.FC = () => {
                         onChange={handleChange}
                         required
                         rows={3}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="Complete address with landmark"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Latitude (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        name="latitude"
-                        value={formData.latitude}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                        placeholder="28.6139"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Longitude (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        name="longitude"
-                        value={formData.longitude}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                        placeholder="77.2090"
                       />
                     </div>
                   </div>
@@ -456,6 +644,8 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.contact_number}
                         onChange={handleChange}
                         required
+                        minLength={6}
+                        maxLength={12}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="011-12345678"
                       />
@@ -471,6 +661,8 @@ const SchoolRegistration: React.FC = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
+                        minLength={6}
+                        maxLength={20}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="school@example.com"
                       />
@@ -503,31 +695,32 @@ const SchoolRegistration: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Affiliation Board
+                        Affiliation Board <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="affiliation_board"
                         value={formData.affiliation_board}
                         onChange={handleChange}
+                        required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                       >
-                        <option value="CBSE">CBSE - Central Board of Secondary Education</option>
-                        <option value="ICSE">ICSE - Council for Indian School Certificate</option>
-                        <option value="State Board">State Board</option>
-                        <option value="IB">IB - International Baccalaureate</option>
-                        <option value="Cambridge">Cambridge International</option>
+                        <option value="">Select Affiliation Board</option>
+                        {Array.isArray(affiliationBoards) && affiliationBoards.map((board) => (
+                          <option key={board.value} value={board.value}>{board.label}</option>
+                        ))}
                       </select>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Affiliation Number
+                        Affiliation Number <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         name="affiliation_number"
                         value={formData.affiliation_number}
                         onChange={handleChange}
+                        required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                         placeholder="e.g., 2130124"
                       />
@@ -535,17 +728,19 @@ const SchoolRegistration: React.FC = () => {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Affiliation Status
+                        Affiliation Status <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="affiliation_status"
                         value={formData.affiliation_status}
                         onChange={handleChange}
+                        required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                       >
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="expired">Expired</option>
+                        <option value="">Select Affiliation Status</option>
+                        {Array.isArray(affiliationStatuses) && affiliationStatuses.map((status) => (
+                          <option key={status.value} value={status.value}>{status.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -565,18 +760,18 @@ const SchoolRegistration: React.FC = () => {
                         Classes Available
                       </label>
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                        {['Nursery', 'KG', '1-5', '6-8', '9-10', '11-12'].map(cls => (
+                        {Array.isArray(classes) && classes.map((cls) => (
                           <button
-                            key={cls}
+                            key={cls.value}
                             type="button"
-                            onClick={() => handleMultiSelect('classes_available', cls)}
+                            onClick={() => handleMultiSelect('classes_available', cls.value)}
                             className={`px-3 py-2 text-sm rounded-lg border transition ${
-                              formData.classes_available.includes(cls)
+                              formData.classes_available.includes(cls.value)
                                 ? 'bg-blue-600 text-white border-blue-600'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
-                            {cls}
+                            {cls.label}
                           </button>
                         ))}
                       </div>
@@ -587,18 +782,18 @@ const SchoolRegistration: React.FC = () => {
                         Streams Available (11-12)
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {['Science', 'Commerce', 'Arts', 'Vocational'].map(stream => (
+                        {Array.isArray(streams) && streams.map((stream) => (
                           <button
-                            key={stream}
+                            key={stream.value}
                             type="button"
-                            onClick={() => handleMultiSelect('streams_available', stream)}
+                            onClick={() => handleMultiSelect('streams_available', stream.value)}
                             className={`px-3 py-2 text-sm rounded-lg border transition ${
-                              formData.streams_available.includes(stream)
+                              formData.streams_available.includes(stream.value)
                                 ? 'bg-blue-600 text-white border-blue-600'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
-                            {stream}
+                            {stream.label}
                           </button>
                         ))}
                       </div>
@@ -606,21 +801,21 @@ const SchoolRegistration: React.FC = () => {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Medium of Instruction
+                        Medium of Instruction <span className="text-red-500">*</span>
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Other'].map(medium => (
+                        {Array.isArray(mediums) && mediums.map((medium) => (
                           <button
-                            key={medium}
+                            key={medium.value}
                             type="button"
-                            onClick={() => handleMultiSelect('medium_of_instruction', medium.toLowerCase())}
+                            onClick={() => handleMultiSelect('medium_of_instruction', medium.value)}
                             className={`px-3 py-2 text-sm rounded-lg border transition ${
-                              formData.medium_of_instruction.includes(medium.toLowerCase())
+                              formData.medium_of_instruction.includes(medium.value)
                                 ? 'bg-blue-600 text-white border-blue-600'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
-                            {medium}
+                            {medium.label}
                           </button>
                         ))}
                       </div>
@@ -667,11 +862,7 @@ const SchoolRegistration: React.FC = () => {
                   </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                      { value: 'free', name: 'Free', price: '₹0', features: ['Basic Features', 'Up to 100 Students', 'Email Support'] },
-                      { value: 'basic', name: 'Basic', price: '₹999/mo', features: ['All Free Features', 'Up to 500 Students', 'Priority Support', 'Reports'] },
-                      { value: 'premium', name: 'Premium', price: '₹2499/mo', features: ['All Basic Features', 'Unlimited Students', '24/7 Support', 'Advanced Analytics', 'SMS Integration'] },
-                    ].map(plan => (
+                    {Array.isArray(subscriptionPlans) && subscriptionPlans.map((plan) => (
                       <label
                         key={plan.value}
                         className={`relative p-6 border-2 rounded-xl cursor-pointer transition-all ${
@@ -688,17 +879,23 @@ const SchoolRegistration: React.FC = () => {
                           onChange={handleChange}
                           className="absolute top-4 right-4 w-4 h-4 text-blue-600"
                         />
-                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-2xl font-bold text-blue-600 mt-2">{plan.price}</p>
+                        <h3 className="text-xl font-bold text-gray-900">{plan.label.split(' - ')[0]}</h3>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">
+                          {plan.label.includes('₹') ? plan.label.split(' - ')[1] : 'Custom'}
+                        </p>
                         <ul className="mt-4 space-y-2">
-                          {plan.features.map(feature => (
-                            <li key={feature} className="text-sm text-gray-600 flex items-center gap-2">
-                              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              {feature}
-                            </li>
-                          ))}
+                          <li className="text-sm text-gray-600 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {plan.value === 'free' ? 'Basic Features' : plan.value === 'basic' ? 'Up to 500 Students' : 'Unlimited Students'}
+                          </li>
+                          <li className="text-sm text-gray-600 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {plan.value === 'free' ? 'Email Support' : plan.value === 'basic' ? 'Priority Support' : '24/7 Support'}
+                          </li>
                         </ul>
                       </label>
                     ))}
@@ -873,9 +1070,9 @@ const SchoolRegistration: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-8 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition disabled:opacity-50"
+                  className="px-8 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition disabled:opacity-50 sm:ml-auto"
                 >
-                  {loading ? 'Registering...' : '✓ Complete Registration'}
+                  {loading ? 'Registering...' : '✓ Register'}
                 </button>
               )}
             </div>
