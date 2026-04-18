@@ -302,7 +302,18 @@ const SchoolRegistration: React.FC = () => {
       
       if (response.data) {
         toast.success('School registered successfully!');
-        setTimeout(() => navigate('/dashboard'), 2000);
+        
+        // Auto-login with the token from backend
+        if (response.data.token) {
+          localStorage.setItem('auth_token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('school', JSON.stringify(response.data.school));
+          
+          // Set auth header for future requests
+          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        }
+        
+        setTimeout(() => navigate('/dashboard'), 1000);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');
