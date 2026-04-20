@@ -4,8 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Students from './pages/Students';
+import StudentList from './pages/StudentList';
+import StudentView from './pages/StudentView';
 import SchoolRegistration from './pages/SchoolRegistration';
+import StudentRegistration from './pages/StudentRegistration';
 import Layout from './components/Layout';
 
 // Protected route wrapper with Layout (sidebar will be shown)
@@ -71,10 +73,16 @@ function AppContent() {
         path="/students/all"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">All Students</h1>
-              <p className="text-gray-600">Student list will appear here...</p>
-            </div>
+            <StudentList />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/students/:id/view"
+        element={
+          <ProtectedRouteWithLayout>
+            <StudentView />
           </ProtectedRouteWithLayout>
         }
       />
@@ -83,10 +91,7 @@ function AppContent() {
         path="/students/add"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Add New Student</h1>
-              <p className="text-gray-600">Student registration form will appear here...</p>
-            </div>
+            <StudentRegistration />
           </ProtectedRouteWithLayout>
         }
       />
@@ -426,6 +431,8 @@ function AppContent() {
           </ProtectedRouteWithLayout>
         }
       />
+
+      {/* END OF ROUTES */}
     </Routes>
   );
 }
