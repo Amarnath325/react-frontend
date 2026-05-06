@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { masterService } from '../services/master';
 import api from '../services/api';
 
 interface StudentFormData {
@@ -18,6 +19,7 @@ interface StudentFormData {
   aadhaar_number: string;
   
   // Academic Details
+  academic_year: string;
   admission_number: string;
   admission_date: string;
   class_id: string;
@@ -67,20 +69,22 @@ interface StudentFormData {
   // Hostel Details
   hostel_required: boolean;
   room_number: string;
-  
-  // Fee Details
-  fee_category: string;
-  discount: string;
-  fee_structure: string;
 }
 
 const StudentRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [stepErrors, setStepErrors] = useState<{ [key: number]: string[] }>({});
+  
+  // Dropdown data states
+  const [genders, setGenders] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [routes, setRoutes] = useState<any[]>([]);
-  const [feeCategories, setFeeCategories] = useState<any[]>([]);
+  const [bloodGroups, setBloodGroups] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [mediums, setMediums] = useState<any[]>([]);
+  const [religions, setReligions] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<StudentFormData>({
     student_id: '',
@@ -94,6 +98,7 @@ const StudentRegistration: React.FC = () => {
     category: '',
     religion: '',
     aadhaar_number: '',
+    academic_year: new Date().getFullYear().toString(),
     admission_number: '',
     admission_date: new Date().toISOString().split('T')[0],
     class_id: '',
@@ -101,7 +106,7 @@ const StudentRegistration: React.FC = () => {
     roll_number: '',
     previous_school: '',
     previous_class: '',
-    medium: 'english',
+    medium: '',
     mobile_number: '',
     alternate_mobile: '',
     email: '',
@@ -131,10 +136,19 @@ const StudentRegistration: React.FC = () => {
     pickup_point: '',
     hostel_required: false,
     room_number: '',
-    fee_category: '',
-    discount: '',
-    fee_structure: '',
   });
+
+  // Required fields for each step
+  const requiredFields = {
+    1: ['first_name', 'gender', 'date_of_birth'],
+    2: ['academic_year', 'admission_number', 'class_id'],
+    3: ['city', 'state', 'pincode'],
+    4: ['father_name', 'father_mobile', 'father_occupation', 'mother_name', 'mother_mobile', 'mother_occupation'],
+    5: [], // Emergency details optional
+    6: [], // Medical details optional
+    7: [], // Transport optional
+    8: [], // Hostel optional
+  };
 
   useEffect(() => {
     fetchDropdownData();
@@ -148,14 +162,23 @@ const StudentRegistration: React.FC = () => {
 
   const fetchDropdownData = async () => {
     try {
-      const [classesRes, routesRes, feeCategoriesRes] = await Promise.all([
-        api.get('/master/classes'),
-        api.get('/master/transport-routes'),
-        api.get('/master/fee-categories'),
+      const [classes, routes, genders, bloodGroups, categories, mediums, religions] = await Promise.all([
+        masterService.getClasses(),
+        masterService.getTransportRoutes(),
+        masterService.getGenders(),
+        masterService.getBloodGroups(),
+        masterService.getCategories(),
+        masterService.getMediums(),
+        masterService.getReligions(),
       ]);
-      setClasses(classesRes.data.data || []);
-      setRoutes(routesRes.data.data || []);
-      setFeeCategories(feeCategoriesRes.data.data || []);
+      
+      setClasses(classes);
+      setRoutes(routes);
+      setGenders(genders);
+      setBloodGroups(bloodGroups);
+      setCategories(categories);
+      setMediums(mediums);
+      setReligions(religions);
     } catch (error) {
       console.error('Error fetching dropdown data:', error);
     }
@@ -175,15 +198,92 @@ const StudentRegistration: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Clear error for this field if it exists
+    if (stepErrors[currentStep]?.includes(name)) {
+      setStepErrors(prev => ({
+        ...prev,
+        [currentStep]: prev[currentStep]?.filter(field => field !== name) || []
+      }));
+    }
+  };
+
+  // Helper for controlled value update
+  const setFieldValue = (name: keyof StudentFormData, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (stepErrors[currentStep]?.includes(name as string)) {
+      setStepErrors(prev => ({
+        ...prev,
+        [currentStep]: prev[currentStep]?.filter(field => field !== name) || []
+      }));
+    }
+  };
+
+  const validateStep = (step: number): boolean => {
+    const errors: string[] = [];
+    const required = requiredFields[step as keyof typeof requiredFields] || [];
+    
+    for (const field of required) {
+      const value = formData[field as keyof StudentFormData];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        errors.push(field);
+      }
+    }
+    
+    // Additional validations
+    if (step === 3) {
+      const mobileRegex = /^[0-9]{10}$/;
+      if (formData.mobile_number && !mobileRegex.test(formData.mobile_number)) {
+        toast.error('Please enter a valid 10-digit mobile number');
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (formData.email && !emailRegex.test(formData.email)) {
+        toast.error('Please enter a valid email address');
+      }
+
+      if (formData.pincode && formData.pincode.length !== 6) {
+        if (!errors.includes('pincode')) errors.push('pincode');
+        toast.error('Pincode must be 6 digits');
+      }
+    }
+    
+    if (step === 1 && formData.aadhaar_number && formData.aadhaar_number.length !== 12) {
+      errors.push('aadhaar_number');
+      toast.error('Aadhaar number must be 12 digits');
+    }
+    
+    setStepErrors(prev => ({ ...prev, [step]: errors }));
+    
+    if (errors.length > 0) {
+      toast.error(`Please fill required fields: ${errors.join(', ')}`);
+      return false;
+    }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => prev - 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateStep(currentStep)) {
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -199,9 +299,6 @@ const StudentRegistration: React.FC = () => {
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => prev + 1);
-  const prevStep = () => setCurrentStep(prev => prev - 1);
-
   const steps = [
     { number: 1, title: 'Basic Details', icon: '👤' },
     { number: 2, title: 'Academic', icon: '📚' },
@@ -211,8 +308,11 @@ const StudentRegistration: React.FC = () => {
     { number: 6, title: 'Medical', icon: '🏥' },
     { number: 7, title: 'Transport', icon: '🚌' },
     { number: 8, title: 'Hostel', icon: '🏠' },
-    { number: 9, title: 'Fee', icon: '💰' },
   ];
+
+  const hasError = (step: number, fieldName: string): boolean => {
+    return stepErrors[step]?.includes(fieldName) || false;
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -263,16 +363,15 @@ const StudentRegistration: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Student ID <span className="text-red-500">*</span>
+                    Student ID
                   </label>
                   <input
                     type="text"
                     name="student_id"
                     value={formData.student_id}
                     onChange={handleChange}
-                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Auto-generated or manual"
+                    placeholder="Auto-generated"
                   />
                 </div>
                 <div>
@@ -284,9 +383,13 @@ const StudentRegistration: React.FC = () => {
                     name="first_name"
                     value={formData.first_name}
                     onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      hasError(1, 'first_name') ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   />
+                  {hasError(1, 'first_name') && (
+                    <p className="text-red-500 text-xs mt-1">First name is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
@@ -309,30 +412,42 @@ const StudentRegistration: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="gender"
                     value={formData.gender}
                     onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(1, 'gender') ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    {genders.map((gender: any) => (
+                      <option key={gender.value} value={gender.value}>{gender.label}</option>
+                    ))}
                   </select>
+                  {hasError(1, 'gender') && (
+                    <p className="text-red-500 text-xs mt-1">Gender is required</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Birth <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     name="date_of_birth"
                     value={formData.date_of_birth}
                     onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(1, 'date_of_birth') ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   />
+                  {hasError(1, 'date_of_birth') && (
+                    <p className="text-red-500 text-xs mt-1">Date of birth is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
@@ -353,14 +468,9 @@ const StudentRegistration: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
                     <option value="">Select</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
+                    {bloodGroups.map((bg: any) => (
+                      <option key={bg.value} value={bg.value}>{bg.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -372,21 +482,24 @@ const StudentRegistration: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
                     <option value="">Select</option>
-                    <option value="general">General</option>
-                    <option value="obc">OBC</option>
-                    <option value="sc">SC</option>
-                    <option value="st">ST</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
-                  <input
-                    type="text"
+                  <select
                     name="religion"
                     value={formData.religion}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
+                  >
+                    <option value="">Select Religion</option>
+                    {religions.map((rel: any) => (
+                      <option key={rel.value} value={rel.value}>{rel.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Aadhaar Number</label>
@@ -394,9 +507,15 @@ const StudentRegistration: React.FC = () => {
                     type="text"
                     name="aadhaar_number"
                     value={formData.aadhaar_number}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFieldValue("aadhaar_number", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     maxLength={12}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="12-digit number"
                   />
                 </div>
               </div>
@@ -409,15 +528,57 @@ const StudentRegistration: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-800">Academic Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Admission Number <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Academic Year <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="academic_year"
+                    value={formData.academic_year}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length > 4) return;
+                      setFieldValue("academic_year", value);
+                    }}
+                    maxLength={4}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(2, 'academic_year')
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="2026"
+                  />
+                  {hasError(2, 'academic_year') && (
+                    <p className="text-red-500 text-xs mt-1">Academic year is required</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Admission Number <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="admission_number"
                     value={formData.admission_number}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                      let value = e.target.value
+                        .toUpperCase()
+                        .replace(/\s/g, "")
+                        .replace(/[^A-Z0-9_-]/g, "");
+                      if (value.length > 12) return;
+                      setFieldValue("admission_number", value);
+                    }}
+                    minLength={3}
+                    maxLength={12}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(2, 'admission_number')
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
                   />
+                  {hasError(2, 'admission_number') && (
+                    <p className="text-red-500 text-xs mt-1">Admission number is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Admission Date</label>
@@ -430,19 +591,25 @@ const StudentRegistration: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Class <span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="class_id"
                     value={formData.class_id}
                     onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(2, 'class_id') ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select Class</option>
                     {classes.map((cls: any) => (
                       <option key={cls.value} value={cls.value}>{cls.label}</option>
                     ))}
                   </select>
+                  {hasError(2, 'class_id') && (
+                    <p className="text-red-500 text-xs mt-1">Class is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
@@ -450,7 +617,16 @@ const StudentRegistration: React.FC = () => {
                     type="text"
                     name="section"
                     value={formData.section}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      let value = e.target.value
+                        .toUpperCase()
+                        .replace(/\s/g, "")
+                        .replace(/[^A-Z0-9]/g, "");
+                      if (value.length > 4) return;
+                      setFieldValue("section", value);
+                    }}
+                    minLength={1}
+                    maxLength={4}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
@@ -460,7 +636,15 @@ const StudentRegistration: React.FC = () => {
                     type="text"
                     name="roll_number"
                     value={formData.roll_number}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length > 12) return;
+                      setFieldValue("roll_number", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    minLength={3}
+                    maxLength={12}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
@@ -471,6 +655,8 @@ const StudentRegistration: React.FC = () => {
                     name="previous_school"
                     value={formData.previous_school}
                     onChange={handleChange}
+                    minLength={3}
+                    maxLength={50}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
@@ -492,11 +678,10 @@ const StudentRegistration: React.FC = () => {
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="english">English</option>
-                    <option value="hindi">Hindi</option>
-                    <option value="marathi">Marathi</option>
-                    <option value="tamil">Tamil</option>
-                    <option value="telugu">Telugu</option>
+                    <option value="">Select</option>
+                    {mediums.map((medium: any) => (
+                      <option key={medium.value} value={medium.value}>{medium.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -509,35 +694,71 @@ const StudentRegistration: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-800">Contact Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mobile Number
+                  </label>
                   <input
-                    type="tel"
+                    type="text"
                     name="mobile_number"
                     value={formData.mobile_number}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length > 10) return;
+                      setFieldValue("mobile_number", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    minLength={10}
+                    maxLength={10}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(3, 'mobile_number')
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="10-digit number"
                   />
+                  {hasError(3, 'mobile_number') && (
+                    <p className="text-red-500 text-xs mt-1">Please enter a valid 10-digit mobile number</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Mobile Number</label>
                   <input
-                    type="tel"
+                    type="text"
                     name="alternate_mobile"
                     value={formData.alternate_mobile}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length > 10) return;
+                      setFieldValue("alternate_mobile", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    minLength={10}
+                    maxLength={10}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="10-digit number"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email ID
+                  </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(3, 'email')
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="student@example.com"
                   />
+                  {hasError(3, 'email') && (
+                    <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
@@ -560,34 +781,62 @@ const StudentRegistration: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${hasError(3, 'city') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {hasError(3, 'city') && (
+                    <p className="text-red-500 text-xs mt-1">City is required</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    State <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg ${hasError(3, 'state') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {hasError(3, 'state') && (
+                    <p className="text-red-500 text-xs mt-1">State is required</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pincode <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="pincode"
                     value={formData.pincode}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length > 6) return;
+                      setFieldValue("pincode", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    minLength={6}
+                    maxLength={6}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      hasError(3, 'pincode')
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="6-digit number"
                   />
+                  {hasError(3, 'pincode') && (
+                    <p className="text-red-500 text-xs mt-1">Pincode is required and must be 6 digits</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -601,18 +850,108 @@ const StudentRegistration: React.FC = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-800 mb-3">Father's Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input type="text" name="father_name" placeholder="Father's Name" value={formData.father_name} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
-                  <input type="tel" name="father_mobile" placeholder="Mobile Number" value={formData.father_mobile} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
-                  <input type="text" name="father_occupation" placeholder="Occupation" value={formData.father_occupation} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Father's Name <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="father_name" placeholder="Father's Name" value={formData.father_name} onChange={handleChange} className={`w-full px-3 py-2 border rounded-lg ${hasError(4, 'father_name') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+                    {hasError(4, 'father_name') && (
+                      <p className="text-red-500 text-xs mt-1">Father's name is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Father's Mobile <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="father_mobile"
+                      placeholder="Mobile Number"
+                      value={formData.father_mobile}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/\D/g, ""); // only digits
+
+                        if (value.length > 10) return;
+
+                        setFieldValue("father_mobile", value);
+                      }}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      minLength={10}
+                      maxLength={10}
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        hasError(4, 'father_mobile')
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {hasError(4, 'father_mobile') && (
+                      <p className="text-red-500 text-xs mt-1">Father's mobile is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Father's Occupation <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="father_occupation" placeholder="Occupation" value={formData.father_occupation} onChange={handleChange} className={`w-full px-3 py-2 border rounded-lg ${hasError(4, 'father_occupation') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+                    {hasError(4, 'father_occupation') && (
+                      <p className="text-red-500 text-xs mt-1">Father's occupation is required</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-800 mb-3">Mother's Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input type="text" name="mother_name" placeholder="Mother's Name" value={formData.mother_name} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
-                  <input type="tel" name="mother_mobile" placeholder="Mobile Number" value={formData.mother_mobile} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
-                  <input type="text" name="mother_occupation" placeholder="Occupation" value={formData.mother_occupation} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mother's Name <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="mother_name" placeholder="Mother's Name" value={formData.mother_name} onChange={handleChange} className={`w-full px-3 py-2 border rounded-lg ${hasError(4, 'mother_name') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+                    {hasError(4, 'mother_name') && (
+                      <p className="text-red-500 text-xs mt-1">Mother's name is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mother's Mobile <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="mother_mobile"
+                      placeholder="Mobile Number"
+                      value={formData.mother_mobile}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/\D/g, ""); // only digits
+
+                        if (value.length > 10) return;
+
+                        setFieldValue("mother_mobile", value);
+                      }}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      minLength={10}
+                      maxLength={10}
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        hasError(4, 'mother_mobile')
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {hasError(4, 'mother_mobile') && (
+                      <p className="text-red-500 text-xs mt-1">Mother's mobile is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mother's Occupation <span className="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="mother_occupation" placeholder="Occupation" value={formData.mother_occupation} onChange={handleChange} className={`w-full px-3 py-2 border rounded-lg ${hasError(4, 'mother_occupation') ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+                    {hasError(4, 'mother_occupation') && (
+                      <p className="text-red-500 text-xs mt-1">Mother's occupation is required</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -621,7 +960,24 @@ const StudentRegistration: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input type="text" name="guardian_name" placeholder="Guardian Name" value={formData.guardian_name} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
                   <input type="text" name="guardian_relation" placeholder="Relation" value={formData.guardian_relation} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
-                  <input type="tel" name="guardian_mobile" placeholder="Mobile Number" value={formData.guardian_mobile} onChange={handleChange} className="px-3 py-2 border rounded-lg" />
+                  <input
+                    type="text"
+                    name="guardian_mobile"
+                    placeholder="Mobile Number"
+                    value={formData.guardian_mobile}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, ""); // only digits
+
+                      if (value.length > 10) return;
+
+                        setFieldValue("guardian_mobile", value);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    minLength={10}
+                    maxLength={10}
+                    className="px-3 py-2 border rounded-lg"
+                  />
                 </div>
               </div>
             </div>
@@ -716,55 +1072,33 @@ const StudentRegistration: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* Step 9: Fee Details */}
-          {currentStep === 9 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-gray-800">Fee Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fee Category</label>
-                  <select name="fee_category" value={formData.fee_category} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Category</option>
-                    {feeCategories.map((cat: any) => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Discount/Scholarship</label>
-                  <input type="text" name="discount" placeholder="e.g., 10% Scholarship" value={formData.discount} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fee Structure</label>
-                  <select name="fee_structure" value={formData.fee_structure} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Fee Structure</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="half_yearly">Half Yearly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Navigation Buttons */}
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
           {currentStep > 1 && (
-            <button type="button" onClick={prevStep} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">
+            <button type="button" onClick={prevStep} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">
               ← Previous
             </button>
           )}
           
-          {currentStep < 9 ? (
-            <button type="button" onClick={nextStep} className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${currentStep === 1 ? 'ml-auto' : ''}`}>
+          {currentStep < 8 ? (
+            <button type="button" onClick={nextStep} className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition ${currentStep === 1 ? 'ml-auto' : ''}`}>
               Next Step →
             </button>
           ) : (
-            <button type="submit" disabled={loading} className="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 ml-auto">
-              {loading ? 'Registering...' : '✓ Register Student'}
+            <button type="submit" disabled={loading} className="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 ml-auto">
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Registering...
+                </span>
+              ) : (
+                '✓ Register Student'
+              )}
             </button>
           )}
         </div>

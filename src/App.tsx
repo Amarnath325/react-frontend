@@ -9,6 +9,7 @@ import StudentView from './pages/StudentView';
 import SchoolRegistration from './pages/SchoolRegistration';
 import StudentRegistration from './pages/StudentRegistration';
 import Layout from './components/Layout';
+import SchoolSettings from './pages/SchoolSettings';
 
 // Protected route wrapper with Layout (sidebar will be shown)
 const ProtectedRouteWithLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -31,23 +32,23 @@ const ProtectedRouteWithLayout: React.FC<{ children: React.ReactNode }> = ({ chi
 };
 
 // Simple protected route (without layout, for pages that don't need sidebar)
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+// const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+//   const { isAuthenticated, isLoading } = useAuth();
   
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
-  }
+//   if (isLoading) {
+//     return (
+//       <div className="min-h-screen flex items-center justify-center">
+//         <div className="text-gray-500">Loading...</div>
+//       </div>
+//     );
+//   }
   
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+//   if (!isAuthenticated) {
+//     return <Navigate to="/login" replace />;
+//   }
   
-  return <>{children}</>;
-};
+//   return <>{children}</>;
+// };
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -400,10 +401,7 @@ function AppContent() {
         path="/admin/settings"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">School Settings</h1>
-              <p className="text-gray-600">Configure school settings</p>
-            </div>
+            <SchoolSettings />
           </ProtectedRouteWithLayout>
         }
       />

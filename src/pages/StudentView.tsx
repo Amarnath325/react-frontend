@@ -3,29 +3,31 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
+type MasterData = string | { m_name: string };
+
 interface StudentData {
   // Basic Details
   student_id: string;
   first_name: string;
   middle_name: string;
   last_name: string;
-  gender: string;
+  gender: MasterData;
   date_of_birth: string;
   age: number;
-  blood_group: string;
-  category: string;
-  religion: string;
+  blood_group: MasterData;
+  category: MasterData;
+  religion: MasterData;
   aadhaar_number: string;
   
   // Academic Details
   admission_number: string;
   admission_date: string;
-  class_name: string;
+  class_name: MasterData;
   section: string;
   roll_number: string;
   previous_school: string;
   previous_class: string;
-  medium: string;
+  medium: MasterData;
   
   // Contact Details
   mobile_number: string;
@@ -216,7 +218,7 @@ const StudentView: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Gender:</span>
-                    <span className="text-gray-800">{student.gender || 'N/A'}</span>
+                    <span className="text-gray-800">{typeof student.gender === 'object' ? student.gender?.m_name : student.gender || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Date of Birth:</span>
@@ -232,15 +234,15 @@ const StudentView: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Blood Group:</span>
-                    <span className="text-gray-800">{student.blood_group || 'N/A'}</span>
+                    <span className="text-gray-800">{typeof student.blood_group === 'object' ? student.blood_group?.m_name : student.blood_group || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Category:</span>
-                    <span className="text-gray-800">{student.category || 'N/A'}</span>
+                    <span className="text-gray-800">{typeof student.category === 'object' ? student.category?.m_name : student.category || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Religion:</span>
-                    <span className="text-gray-800">{student.religion || 'N/A'}</span>
+                    <span className="text-gray-800">{typeof student.religion === 'object' ? student.religion?.m_name : student.religion || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Aadhaar Number:</span>
@@ -276,7 +278,7 @@ const StudentView: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Class:</span>
-                    <span className="text-gray-800">{student.class_name || 'N/A'}</span>
+                    <span className="text-gray-800">{typeof student.class_name === 'object' ? student.class_name?.m_name : student.class_name || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Section:</span>
@@ -300,7 +302,7 @@ const StudentView: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium text-gray-600">Medium:</span>
-                    <span className="text-gray-800">{student.medium || 'English'}</span>
+                    <span className="text-gray-800">{typeof student.medium === 'object' ? student.medium?.m_name : student.medium || 'English'}</span>
                   </div>
                 </div>
               </div>

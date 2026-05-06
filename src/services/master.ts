@@ -68,6 +68,16 @@ export const masterService = {
     }
   },
   
+  getTransportRoutes: async (): Promise<MasterOption[]> => {
+    try {
+      const response = await api.get('/master/options-id/transport-route');
+      return convertToOptions(response.data?.data);
+    } catch (error) {
+      console.error('Error fetching transport routes:', error);
+      return [];
+    }
+  },
+  
   getStreams: async (): Promise<MasterOption[]> => {
     try {
       const response = await api.get('/master/streams');
@@ -94,6 +104,26 @@ export const masterService = {
       return convertToOptions(response.data?.data);
     } catch (error) {
       console.error('Error fetching subscription plans:', error);
+      return [];
+    }
+  },
+
+  getGenders: async (): Promise<MasterOption[]> => {
+    try {
+      const response = await api.get('/master/genders');
+      return convertToOptions(response.data?.data);
+    } catch (error) {
+      console.error('Error fetching genders:', error);
+      return [];
+    }
+  },
+
+  getBloodGroups: async (): Promise<MasterOption[]> => {
+    try {
+      const response = await api.get('/master/blood-groups');
+      return convertToOptions(response.data?.data);
+    } catch (error) {
+      console.error('Error fetching blood groups:', error);
       return [];
     }
   },

@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
+type MasterData = string | { m_name: string };
+
 interface Student {
   id: number;
   student_id: string;
   admission_number: string;
   first_name: string;
   last_name: string;
-  class_name: string;
+  class_name: MasterData;
   section: string;
   roll_number: string;
   father_name: string;
@@ -232,7 +234,7 @@ const StudentList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{student.admission_number}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {student.class_name} {student.section ? `- ${student.section}` : ''}
+                    {typeof student.class_name === 'object' ? student.class_name?.m_name : student.class_name} {student.section ? `- ${student.section}` : ''}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{student.roll_number || '-'}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{student.father_name || '-'}</td>
