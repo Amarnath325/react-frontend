@@ -490,7 +490,7 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-6 overflow-visible min-h-[430px]">
             <AcademicYearManager onClose={() => setActiveCard(null)} />
           </div>
         </div>
@@ -498,7 +498,7 @@ const SchoolSettings: React.FC = () => {
 
       {/* ========== FEE STRUCTURE SECTION ========== */}
       {activeCard === 'fee' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-visible">
           <div className="px-6 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">Fee Structure</h2>
@@ -510,7 +510,7 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-6 overflow-visible min-h-[430px]">
             <FeeStructureManager />
           </div>
         </div>
@@ -530,7 +530,7 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-6 overflow-visible min-h-[430px]">
             <ExaminationManager />
           </div>
         </div>

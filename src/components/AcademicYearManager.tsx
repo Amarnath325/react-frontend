@@ -130,39 +130,67 @@ const AcademicYearManager: React.FC<AcademicYearManagerProps> = ({ onClose }) =>
   };
 
   // Optimized toggle function - only updates the specific year without full reload
-  const handleToggleCurrent = async (id: number, isCurrentlyCurrent: boolean) => {
-    if (isCurrentlyCurrent) {
-      toast.error('This is already the current academic year');
-      return;
-    }
-    
-    setUpdatingId(id); // Show loading state on this toggle
-    
+  const handleToggleCurrent = async (
+    id: number,
+    isCurrentlyCurrent: boolean
+  ) => {
+    setUpdatingId(id);
+
     try {
-      const response = await api.post(`/school/academic-years/${id}/set-current`);
+
+      // BOOLEAN nahi, INTEGER bhejo
+      const payload = {
+        is_current: isCurrentlyCurrent ? 0 : 1,
+      };
+
+      const response = await api.post(
+        `/school/academic-years/${id}/set-current`,
+        payload
+      );
+
       if (response.data.success) {
-        toast.success('Current academic year updated successfully');
-        
-        // Update local state without reloading entire list
-        setAcademicYears(prevYears => {
-          // First, set all years to is_current = false
-          const updatedYears = prevYears.map(year => ({
-            ...year,
-            is_current: false,
-            status: 0
-          }));
-          
-          // Then set the selected year to is_current = true
-          return updatedYears.map(year => 
-            year.id === id 
-              ? { ...year, is_current: true, status: 1 }
-              : year
-          );
-        });
+
+        const updatedData = response.data.data;
+
+        toast.success(response.data.message);
+
+        setAcademicYears((prevYears) =>
+          prevYears.map((year) => {
+
+            // UNCHECK CASE
+            if (updatedData.is_current === 0) {
+
+              if (year.id === id) {
+                return {
+                  ...year,
+                  is_current: false,
+                  status: 0,
+                };
+              }
+
+              return year;
+            }
+
+            // CHECK CASE
+            return {
+              ...year,
+              is_current: year.id === id,
+              status: year.id === id ? 1 : 0,
+            };
+          })
+        );
       }
+
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update');
+
+      console.error(error);
+
+      toast.error(
+        error.response?.data?.message || "Failed to update"
+      );
+
     } finally {
+
       setUpdatingId(null);
     }
   };
@@ -294,11 +322,10 @@ const AcademicYearManager: React.FC<AcademicYearManagerProps> = ({ onClose }) =>
                   <ToggleSwitch
                     checked={year.is_current}
                     onChange={() => handleToggleCurrent(year.id, year.is_current)}
-                    disabled={year.is_current || updatingId === year.id}
                   />
                   {updatingId === year.id && (
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  )}
+                  )}     
                 </div>
                 
                 {/* Edit Button */}
