@@ -3,6 +3,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface FeeStructure {
   id: number;
@@ -65,7 +67,7 @@ const SearchableSelect: React.FC<{
   isClearable?: boolean;
 }> = ({ options, value, onChange, placeholder, isClearable = true }) => {
   const selectedOption = options.find(opt => opt.value === value) || null;
-  
+
   return (
     <Select
       options={options}
@@ -105,15 +107,22 @@ const FeeStructureManager: React.FC = () => {
   const [importData, setImportData] = useState<any[]>([]);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [showImportResult, setShowImportResult] = useState(false);
+
+  // Bulk action states
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAcademicYear, setFilterAcademicYear] = useState<string>('');
@@ -240,13 +249,13 @@ const FeeStructureManager: React.FC = () => {
       // Extract data from response
       const feeHeadsData = convertObjectToArray(feeHeadsRes.data?.data || feeHeadsRes.data || {});
       const frequenciesData = convertObjectToArray(frequenciesRes.data?.data || frequenciesRes.data || {});
-      
+
       console.log('Converted Fee Heads:', feeHeadsData);
       console.log('Converted Frequencies:', frequenciesData);
-      
+
       setFeeHeads(feeHeadsData);
       setFrequencies(frequenciesData);
-      
+
     } catch (error) {
       console.error('Error fetching master data:', error);
       toast.error('Failed to load master data');
@@ -294,7 +303,7 @@ const FeeStructureManager: React.FC = () => {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         getClassName(item.class_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getFeeHeadLabel(item.fee_head).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getAcademicYearLabel(item.academic_year_id).toLowerCase().includes(searchTerm.toLowerCase())
@@ -325,7 +334,7 @@ const FeeStructureManager: React.FC = () => {
     filtered.sort((a, b) => {
       let aVal: any = a[sortColumn as keyof FeeStructure];
       let bVal: any = b[sortColumn as keyof FeeStructure];
-      
+
       if (sortColumn === 'class_name') {
         aVal = getClassName(a.class_id);
         bVal = getClassName(b.class_id);
@@ -339,7 +348,7 @@ const FeeStructureManager: React.FC = () => {
         aVal = getFrequencyLabel(a.frequency);
         bVal = getFrequencyLabel(b.frequency);
       }
-      
+
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -373,8 +382,8 @@ const FeeStructureManager: React.FC = () => {
 
   // Pagination
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = itemsPerPage === -1 
-    ? filteredData 
+  const paginatedData = itemsPerPage === -1
+    ? filteredData
     : filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const validateAmount = (value: number): boolean => {
@@ -541,6 +550,77 @@ const FeeStructureManager: React.FC = () => {
     }
   };
 
+  const handleToggleStatus = async (id: number) => {
+    try {
+      const response = await api.patch(`/school/fee-structures/${id}/toggle-status`);
+      if (response.data.success) {
+        toast.success(response.data.message || 'Status updated successfully');
+        fetchFeeStructures();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleSelectRow = (id: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(paginatedData.map(item => item.id));
+      setSelectedItems(allIds);
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: boolean) => {
+    if (selectedItems.size === 0) {
+      toast.error('Please select at least one fee structure');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to ${status ? 'activate' : 'deactivate'} ${selectedItems.size} selected fee structure(s)?`)) {
+      return;
+    }
+
+    setBulkUpdating(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const id of selectedItems) {
+      try {
+        const response = await api.patch(`/school/fee-structures/${id}/toggle-status`, { 
+          is_active: status 
+        });
+        if (response.data.success) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      } catch (error) {
+        errorCount++;
+      }
+    }
+
+    setBulkUpdating(false);
+    if (successCount > 0) {
+      toast.success(`${successCount} fee structure(s) updated successfully`);
+      setSelectedItems(new Set());
+      fetchFeeStructures();
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to update ${errorCount} fee structure(s)`);
+    }
+  };
+
   const handleExport = () => {
     try {
       const exportData = filteredData.map(item => ({
@@ -566,7 +646,7 @@ const FeeStructureManager: React.FC = () => {
     }
   };
 
-  const downloadSampleFile = () => {
+  const downloadSampleFile = async () => {
     try {
       // Get dynamic values from state
       const academicYearValues = academicYears.length > 0 ? academicYears.map(y => y.label) : ['2024-2025', '2025-2026', '2026-2027'];
@@ -576,87 +656,145 @@ const FeeStructureManager: React.FC = () => {
       const optionalValues = ['Yes', 'No'];
       const activeValues = ['Yes', 'No'];
 
-      // Create data with sample rows
-      const data = [
-        ['Academic Year', 'Class', 'Fee Head', 'Amount (₹)', 'Frequency', 'Due Date', 'Late Fee (₹)', 'Optional Fee', 'Active'],
-        [academicYearValues[0], classValues[0], feeHeadValues[0], 5000, frequencyValues[0], '2024-07-10', 100, 'No', 'Yes'],
-        [academicYearValues[0], classValues[0], feeHeadValues[0], 10000, frequencyValues[0], '2024-06-15', 200, 'Yes', 'Yes'],
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Fee Structure');
+
+      // Set column headers and widths
+      worksheet.columns = [
+        { header: 'Academic Year', key: 'academicYear', width: 18 },
+        { header: 'Class', key: 'className', width: 15 },
+        { header: 'Fee Head', key: 'feeHead', width: 25 },
+        { header: 'Amount (₹)', key: 'amount', width: 12 },
+        { header: 'Frequency', key: 'frequency', width: 15 },
+        { header: 'Due Date', key: 'dueDate', width: 12 },
+        { header: 'Late Fee (₹)', key: 'lateFee', width: 12 },
+        { header: 'Optional Fee', key: 'optional', width: 14 },
+        { header: 'Active', key: 'active', width: 10 },
       ];
 
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 18 }, // Academic Year
-        { wch: 15 }, // Class
-        { wch: 25 }, // Fee Head
-        { wch: 12 }, // Amount
-        { wch: 15 }, // Frequency
-        { wch: 12 }, // Due Date
-        { wch: 12 }, // Late Fee
-        { wch: 14 }, // Optional Fee
-        { wch: 10 }, // Active
-      ];
+      // Add two sample rows
+      worksheet.addRow({
+        academicYear: academicYearValues[0],
+        className: classValues[0],
+        feeHead: feeHeadValues[0],
+        amount: 5000,
+        frequency: frequencyValues[0],
+        dueDate: '2024-07-10',
+        lateFee: 100,
+        optional: 'No',
+        active: 'Yes',
+      });
+      worksheet.addRow({
+        academicYear: academicYearValues[0],
+        className: classValues[0],
+        feeHead: feeHeadValues[0],
+        amount: 10000,
+        frequency: frequencyValues[0],
+        dueDate: '2024-06-15',
+        lateFee: 200,
+        optional: 'Yes',
+        active: 'Yes',
+      });
 
-      // Create Excel with data validation (dropdowns)
-      // Note: XLSX library doesn't support data validation perfectly, 
-      // but we create the structure that Excel will recognize
-      
-      // Add data validation ranges in a separate hidden sheet approach
-      // Create hidden sheet for dropdown lists
-      const listData = [
-        ['Academic_Year_List', 'Class_List', 'Fee_Head_List', 'Frequency_List', 'Optional_List', 'Active_List'],
-        ...academicYearValues.map(y => [y, '', '', '', '', '']),
-      ];
-      
-      // Fill class values
-      for (let i = 0; i < classValues.length; i++) {
-        if (!listData[i + 1]) listData[i + 1] = [];
-        listData[i + 1][1] = classValues[i];
-      }
-      
-      // Fill fee head values
-      for (let i = 0; i < feeHeadValues.length; i++) {
-        if (!listData[i + 1]) listData[i + 1] = [];
-        listData[i + 1][2] = feeHeadValues[i];
-      }
-      
-      // Fill frequency values
-      for (let i = 0; i < frequencyValues.length; i++) {
-        if (!listData[i + 1]) listData[i + 1] = [];
-        listData[i + 1][3] = frequencyValues[i];
-      }
-      
-      // Fill optional values
-      for (let i = 0; i < optionalValues.length; i++) {
-        if (!listData[i + 1]) listData[i + 1] = [];
-        listData[i + 1][4] = optionalValues[i];
-      }
-      
-      // Fill active values
-      for (let i = 0; i < activeValues.length; i++) {
-        if (!listData[i + 1]) listData[i + 1] = [];
-        listData[i + 1][5] = activeValues[i];
+      // Write lists data to columns L, M, N, O, P, Q
+      worksheet.getCell('L1').value = 'Academic_Year_List';
+      worksheet.getCell('M1').value = 'Class_List';
+      worksheet.getCell('N1').value = 'Fee_Head_List';
+      worksheet.getCell('O1').value = 'Frequency_List';
+      worksheet.getCell('P1').value = 'Optional_List';
+      worksheet.getCell('Q1').value = 'Active_List';
+
+      academicYearValues.forEach((val, idx) => {
+        worksheet.getCell(`L${idx + 2}`).value = val;
+      });
+      classValues.forEach((val, idx) => {
+        worksheet.getCell(`M${idx + 2}`).value = val;
+      });
+      feeHeadValues.forEach((val, idx) => {
+        worksheet.getCell(`N${idx + 2}`).value = val;
+      });
+      frequencyValues.forEach((val, idx) => {
+        worksheet.getCell(`O${idx + 2}`).value = val;
+      });
+      optionalValues.forEach((val, idx) => {
+        worksheet.getCell(`P${idx + 2}`).value = val;
+      });
+      activeValues.forEach((val, idx) => {
+        worksheet.getCell(`Q${idx + 2}`).value = val;
+      });
+
+      // Hide helper columns L to Q
+      worksheet.getColumn('L').hidden = true;
+      worksheet.getColumn('M').hidden = true;
+      worksheet.getColumn('N').hidden = true;
+      worksheet.getColumn('O').hidden = true;
+      worksheet.getColumn('P').hidden = true;
+      worksheet.getColumn('Q').hidden = true;
+
+      // Apply data validation to columns A, B, C, E, H, I for rows 2 to 500
+      for (let r = 2; r <= 500; r++) {
+        worksheet.getCell(`A${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$L$2:$L$${1 + academicYearValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        worksheet.getCell(`B${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$M$2:$M$${1 + classValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        worksheet.getCell(`C${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$N$2:$N$${1 + feeHeadValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        worksheet.getCell(`E${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$O$2:$O$${1 + frequencyValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        worksheet.getCell(`H${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$P$2:$P$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Yes or No.',
+        };
+
+        worksheet.getCell(`I${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Fee Structure'!$Q$2:$Q$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Yes or No.',
+        };
       }
 
-      const wsList = XLSX.utils.aoa_to_sheet(listData);
-      wsList['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 10 }];
+      // Write to buffer and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, 'sample_fee_structures.xlsx');
 
-      // Create workbook with hidden sheet for lists
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Fee Structure');
-      XLSX.utils.book_append_sheet(wb, wsList, '__HiddenList__');
-      
-      // Hide the list sheet (Excel will hide it)
-      if (wb.Workbook) {
-        wb.Workbook.Sheets = wb.Workbook.Sheets || {};
-        wb.Workbook.Sheets['__HiddenList__'] = { state: 'hidden' };
-      }
-
-      XLSX.writeFile(wb, 'sample_fee_structures.xlsx');
       toast.success('Sample file downloaded!');
-      toast('Excel file contains dropdown lists. Use the dropdown arrows in each cell.');
-      
+      // toast('Excel file contains dropdown lists. Use the dropdown arrows in each cell.');
     } catch (error) {
       console.error('Error downloading sample file:', error);
       toast.error('Failed to download sample file');
@@ -672,13 +810,90 @@ const FeeStructureManager: React.FC = () => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Read first sheet
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
-        setImportData(jsonData);
-        setImportPreview(jsonData.slice(0, 5));
+        // Get the range of the sheet
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:I100');
+        
+        // Find the actual header row (first row with valid headers)
+        let headerRowIndex = 0;
+        let headers: string[] = [];
+        
+        for (let row = range.s.r; row <= range.e.r; row++) {
+          const firstCell = worksheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+          if (firstCell && firstCell.v && 
+              (firstCell.v === 'Academic Year' || 
+              firstCell.v === 'Academic Year' || 
+              firstCell.v?.toString().includes('Academic'))) {
+            headerRowIndex = row;
+            break;
+          }
+        }
+        
+        // Get headers from the identified header row
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cell = worksheet[XLSX.utils.encode_cell({ r: headerRowIndex, c: col })];
+          if (cell && cell.v) {
+            headers.push(cell.v.toString().trim());
+          } else {
+            headers.push('');
+          }
+        }
+        
+        // Get data rows (from after header row)
+        const dataRows: any[] = [];
+        for (let row = headerRowIndex + 1; row <= range.e.r; row++) {
+          const rowData: any = {};
+          let hasData = false;
+          
+          for (let col = 0; col < headers.length; col++) {
+            const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: col })];
+            const value = cell ? cell.v : '';
+            
+            if (value && value.toString().trim() !== '') {
+              hasData = true;
+            }
+            
+            // Map only valid headers (skip __EMPTY, _List, etc.)
+            const header = headers[col];
+            if (header && !header.includes('_List') && header !== '__EMPTY' && header !== '__EMPTY_1') {
+              rowData[header] = value;
+            }
+          }
+          
+          // Only add if row has data
+          if (hasData) {
+            dataRows.push(rowData);
+          }
+        }
+        
+        console.log('Headers found:', headers);
+        console.log('Data rows found:', dataRows.length);
+        
+        // Further filter: remove rows that are list headers
+        const filteredData = dataRows.filter((row: any) => {
+          // Check if row has valid data
+          return row['Class'] && 
+                row['Class'].trim() !== '' && 
+                !row['Class'].includes('_List') &&
+                !row['Class'].includes('Academic_Year') &&
+                typeof row['Class'] === 'string';
+        });
+        
+        console.log('Filtered data rows:', filteredData.length);
+        
+        if (filteredData.length === 0) {
+          toast.error('No valid data found in the file. Please check the format.');
+          return;
+        }
+        
+        setImportData(filteredData);
+        setImportPreview(filteredData.slice(0, 5));
         setIsImportModalOpen(true);
+        
       } catch (error) {
         console.error('File read error:', error);
         toast.error('Failed to read file');
@@ -691,79 +906,248 @@ const FeeStructureManager: React.FC = () => {
     setImporting(true);
     let successCount = 0;
     let errorCount = 0;
-    const errors: string[] = [];
+    const errors: any[] = [];
 
-    for (const row of importData) {
+    // Process each row from importData
+    for (let i = 0; i < importData.length; i++) {
+      const row = importData[i];
+      const rowNum = i + 2;
+
       try {
-        // Find Academic Year ID from label
-        const academicYearItem = academicYears.find(y => y.label === row['Academic Year']);
-        if (!academicYearItem) {
-          errors.push(`Academic year not found: ${row['Academic Year']}`);
-          errorCount++;
+        // Skip rows that are list headers or empty
+        if (!row['Class'] || 
+            row['Class'].toString().trim() === '' ||
+            row['Class'].toString().includes('_List') ||
+            row['Class'].toString().includes('Academic_Year') ||
+            row['Class'].toString() === 'Class_List') {
           continue;
         }
 
-        // Find Class ID from name
+        // Skip if fee head is list header
+        if (row['Fee Head'] && row['Fee Head'].toString().includes('_List')) {
+          continue;
+        }
+
+        // Validate and get Academic Year (optional)
+        let academicYearId = null;
+        if (row['Academic Year'] && row['Academic Year'].toString().trim() !== '') {
+          const academicYearItem = academicYears.find(y => y.label === row['Academic Year']);
+          if (!academicYearItem) {
+            errors.push({ row: rowNum, error: `Academic year not found: ${row['Academic Year']}` });
+            errorCount++;
+            continue;
+          }
+          academicYearId = academicYearItem.value;
+        }
+
+        // Validate and get Class
         const classItem = classes.find(c => c.name === row['Class']);
         if (!classItem) {
-          errors.push(`Class not found: ${row['Class']}`);
+          errors.push({ row: rowNum, error: `Class not found: ${row['Class']}` });
           errorCount++;
           continue;
         }
 
-        // Find Fee Head ID from label
+        // Validate and get Fee Head
         const feeHeadItem = feeHeads.find(f => f.label === row['Fee Head']);
         if (!feeHeadItem) {
-          errors.push(`Fee head not found: ${row['Fee Head']}`);
+          errors.push({ row: rowNum, error: `Fee head not found: ${row['Fee Head']}` });
           errorCount++;
           continue;
         }
 
-        // Find Frequency ID from label
-        const frequencyItem = frequencies.find(f => f.label === row['Frequency']);
-        if (!frequencyItem) {
-          errors.push(`Frequency not found: ${row['Frequency']}`);
+        // Validate Amount
+        const amount = parseFloat(row['Amount (₹)']);
+        if (isNaN(amount) || amount < 10 || amount > 99999999) {
+          errors.push({ row: rowNum, error: `Invalid amount: ${row['Amount (₹)']}` });
           errorCount++;
           continue;
+        }
+
+        // Validate and get Frequency
+        const frequencyItem = frequencies.find(f => f.label === row['Frequency']);
+        if (!frequencyItem) {
+          errors.push({ row: rowNum, error: `Frequency not found: ${row['Frequency']}` });
+          errorCount++;
+          continue;
+        }
+
+        // Parse Due Date
+        let dueDate = null;
+        if (row['Due Date'] && row['Due Date'].toString().trim() !== '') {
+          try {
+            let dateStr = row['Due Date'].toString();
+            if (dateStr.includes('/')) {
+              const parts = dateStr.split('/');
+              if (parts.length === 3) {
+                dueDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
+            } else {
+              dueDate = dateStr;
+            }
+          } catch (e) {
+            dueDate = row['Due Date'];
+          }
+        }
+
+        // Parse Late Fee
+        let lateFeeAmount = 0;
+        if (row['Late Fee (₹)'] && row['Late Fee (₹)'].toString().trim() !== '') {
+          lateFeeAmount = parseFloat(row['Late Fee (₹)']);
+          if (isNaN(lateFeeAmount)) {
+            lateFeeAmount = 0;
+          }
+        }
+
+        // Parse Optional Fee
+        let isOptional = 0;
+        if (row['Optional Fee'] && row['Optional Fee'].toString().trim() !== '') {
+          isOptional = row['Optional Fee'].toString().toLowerCase() === 'yes' ? 1 : 0;
+        }
+
+        // Parse Active
+        let isActive = 1;
+        if (row['Active'] && row['Active'].toString().trim() !== '') {
+          isActive = row['Active'].toString().toLowerCase() === 'yes' ? 1 : 0;
         }
 
         const submitData = {
-          academic_year_id: academicYearItem.value,
+          academic_year_id: academicYearId,
           class_id: classItem.id,
           fee_head: feeHeadItem.value,
-          amount: parseFloat(row['Amount (₹)']),
+          amount: amount,
           frequency: frequencyItem.value,
-          due_date: row['Due Date'] || null,
-          late_fee_amount: parseFloat(row['Late Fee (₹)']) || 0,
-          // Convert Yes/No to 1/0
-          is_optional: row['Optional Fee']?.toLowerCase() === 'yes' ? 1 : 0,
-          is_active: row['Active']?.toLowerCase() === 'yes' ? 1 : 0,
+          due_date: dueDate,
+          late_fee_amount: lateFeeAmount,
+          is_optional: isOptional,
+          is_active: isActive,
         };
 
-        console.log('Importing data:', submitData);
+        console.log(`Importing row ${rowNum}:`, submitData);
         
         const response = await api.post('/school/fee-structures', submitData);
         if (response.data.success) {
           successCount++;
         } else {
           errorCount++;
-          errors.push(`Failed to import: ${row['Class']} - ${row['Fee Head']}`);
+          errors.push({ row: rowNum, error: response.data.message || 'Import failed' });
         }
+        
       } catch (error: any) {
         errorCount++;
-        errors.push(`Error importing: ${row['Class']} - ${row['Fee Head']}`);
+        errors.push({ row: rowNum, error: error.response?.data?.message || error.message });
       }
     }
 
-    toast.success(`Import completed: ${successCount} success, ${errorCount} failed`);
-    if (errors.length > 0) {
+    if (successCount > 0) {
+      toast.success(`✅ ${successCount} record(s) imported successfully!`);
+    }
+    if (errorCount > 0) {
+      toast.error(`❌ ${errorCount} record(s) failed.`);
       console.error('Import errors:', errors);
-      toast.error(`${errors.length} errors occurred. Check console for details.`);
     }
     
     setIsImportModalOpen(false);
-    fetchFeeStructures();
+    
+    if (successCount > 0) {
+      fetchFeeStructures();
+    }
+    
     setImporting(false);
+  };
+
+  const downloadErrorReport = async () => {
+    if (!importResult || !importResult.errors || Object.keys(importResult.errors).length === 0) {
+      toast.error('No errors to report');
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Import Errors');
+
+      // Set column headers
+      worksheet.columns = [
+        { header: 'Row Number', key: 'row_number', width: 12 },
+        { header: 'Academic Year', key: 'academic_year', width: 18 },
+        { header: 'Class', key: 'class', width: 15 },
+        { header: 'Fee Head', key: 'fee_head', width: 25 },
+        { header: 'Amount', key: 'amount', width: 12 },
+        { header: 'Frequency', key: 'frequency', width: 15 },
+        { header: 'Due Date', key: 'due_date', width: 12 },
+        { header: 'Late Fee', key: 'late_fee', width: 12 },
+        { header: 'Optional Fee', key: 'optional', width: 14 },
+        { header: 'Active', key: 'active', width: 10 },
+        { header: 'Error Details', key: 'error_details', width: 40 },
+      ];
+
+      // Add data rows with errors
+      Object.entries(importResult.errors).forEach(([rowNum, errorData]: [string, any]) => {
+        const rowData = errorData.row_data;
+        const errorMessages = errorData.errors.join('; ');
+
+        const row = worksheet.addRow({
+          row_number: rowNum,
+          academic_year: rowData['academic_year_label'] || '',
+          class: rowData['class_name'] || '',
+          fee_head: rowData['fee_head_label'] || '',
+          amount: rowData['amount'] || '',
+          frequency: rowData['frequency_label'] || '',
+          due_date: rowData['due_date'] || '',
+          late_fee: rowData['late_fee_amount'] || '',
+          optional: rowData['optional_fee'] || '',
+          active: rowData['is_active'] || '',
+          error_details: errorMessages,
+        });
+
+        // Style error row - red background for error column
+        row.cells[10].fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFF0000' },
+          bgColor: { argb: 'FF0000' }
+        };
+        row.cells[10].font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      });
+
+      // Style header row
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD32F2F' }
+      };
+      worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+
+      // Add summary sheet
+      const summarySheet = workbook.addWorksheet('Summary');
+      summarySheet.columns = [
+        { header: 'Metric', key: 'metric', width: 20 },
+        { header: 'Value', key: 'value', width: 15 },
+      ];
+
+      summarySheet.addRow({ metric: 'Total Records', value: importResult.total_count });
+      summarySheet.addRow({ metric: 'Successfully Imported', value: importResult.imported_count });
+      summarySheet.addRow({ metric: 'Failed Records', value: importResult.error_count });
+      summarySheet.addRow({ metric: 'Success Rate', value: `${((importResult.imported_count / importResult.total_count) * 100).toFixed(2)}%` });
+
+      // Style summary sheet
+      summarySheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1976D2' }
+      };
+      summarySheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+
+      // Write to buffer and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `import_errors_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      toast.success('Error report downloaded!');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate error report');
+    }
   };
 
   const getFeeHeadLabel = (feeHeadId: number | string | any) => {
@@ -924,11 +1308,56 @@ const FeeStructureManager: React.FC = () => {
         />
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedItems.size > 0 && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
+          <div className="text-sm text-blue-800 font-medium">
+            {selectedItems.size} item(s) selected
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleBulkStatusUpdate(true)}
+              disabled={bulkUpdating}
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {bulkUpdating ? 'Updating...' : 'Active'}
+            </button>
+            <button
+              onClick={() => handleBulkStatusUpdate(false)}
+              disabled={bulkUpdating}
+              className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {bulkUpdating ? 'Updating...' : 'Inactive'}
+            </button>
+            <button
+              onClick={() => setSelectedItems(new Set())}
+              className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table - Full width */}
       <div className="overflow-x-auto border-y border-gray-200">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.size === paginatedData.length && paginatedData.length > 0}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  className="rounded"
+                />
+              </th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
                 Academic Year {getSortIcon('academic_year_label')}
               </th>
@@ -954,7 +1383,7 @@ const FeeStructureManager: React.FC = () => {
           <tbody className="divide-y divide-gray-200 bg-white">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -965,7 +1394,15 @@ const FeeStructureManager: React.FC = () => {
               </tr>
             ) : (
               paginatedData.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedItems.has(item.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => handleSelectRow(item.id)}
+                      className="rounded"
+                    />
+                  </td>
                   <td className="px-4 py-3 text-gray-700">{getAcademicYearLabel(item.academic_year_id)}</td>
                   <td className="px-4 py-3 text-gray-700 font-medium">{getClassName(item.class_id)}</td>
                   <td className="px-4 py-3 text-gray-700">{getFeeHeadLabel(item.fee_head)}</td>
@@ -977,9 +1414,27 @@ const FeeStructureManager: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-700">{formatDisplayDate(item.due_date) || '-'}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${item.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(item.id)}
+                        className={`
+                          relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+                          ${item.is_active ? 'bg-green-500' : 'bg-gray-300'}
+                        `}
+                        title={item.is_active ? 'Click to deactivate' : 'Click to activate'}
+                      >
+                        <span
+                          className={`
+                            inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform
+                            ${item.is_active ? 'translate-x-5' : 'translate-x-1'}
+                          `}
+                        />
+                      </button>
+                      <span className={`text-xs font-medium ${item.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                        {item.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -1099,50 +1554,176 @@ const FeeStructureManager: React.FC = () => {
         </div>
       )}
 
-      {/* Import Preview Modal */}
+      {/* Import Preview & Progress Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 rounded-t-xl flex-shrink-0">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-white">Import Fee Structures</h3>
-                <button onClick={() => setIsImportModalOpen(false)} className="text-white hover:bg-white/20 rounded-lg p-1 transition">
+                <h3 className="text-lg font-bold text-white">
+                  {showImportResult ? 'Import Results' : 'Import Fee Structures'}
+                </h3>
+                <button 
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setShowImportResult(false);
+                  }} 
+                  className="text-white hover:bg-white/20 rounded-lg p-1 transition"
+                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
+
             <div className="p-5 overflow-y-auto flex-1">
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800"><strong>Total Records:</strong> {importData.length} | <strong>Preview (First 5 rows):</strong></p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border border-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      {importPreview.length > 0 && Object.keys(importPreview[0]).map((key, idx) => (
-                        <th key={idx} className="px-3 py-2 text-left border">{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importPreview.map((row, idx) => (
-                      <tr key={idx} className="border-t">
-                        {Object.values(row).map((val: any, colIdx) => (
-                          <td key={colIdx} className="px-3 py-2 border">{val}</td>
+              {!showImportResult ? (
+                <>
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Total Records:</strong> {importData.length} | <strong>Preview (First 5 rows):</strong>
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border border-gray-200">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          {importPreview.length > 0 && Object.keys(importPreview[0]).map((key, idx) => (
+                            <th key={idx} className="px-3 py-2 text-left border">{key}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.map((row, idx) => (
+                          <tr key={idx} className="border-t hover:bg-gray-50">
+                            {Object.values(row).map((val: any, colIdx) => (
+                              <td key={colIdx} className="px-3 py-2 border">{val}</td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {importing && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-700">Processing Import...</p>
+                        <span className="text-sm font-bold text-blue-600">{importProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300"
+                          style={{ width: `${importProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Import Result Summary */}
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                      <p className="text-xs text-gray-600 font-medium">Total Records</p>
+                      <p className="text-2xl font-bold text-blue-600 mt-1">{importResult?.total_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+                      <p className="text-xs text-gray-600 font-medium">Successfully Imported</p>
+                      <p className="text-2xl font-bold text-green-600 mt-1">{importResult?.imported_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
+                      <p className="text-xs text-gray-600 font-medium">Failed Records</p>
+                      <p className="text-2xl font-bold text-red-600 mt-1">{importResult?.error_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                      <p className="text-xs text-gray-600 font-medium">Success Rate</p>
+                      <p className="text-2xl font-bold text-purple-600 mt-1">
+                        {importResult?.total_count ? ((importResult?.imported_count / importResult?.total_count) * 100).toFixed(1) : 0}%
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Error Details */}
+                  {importResult?.error_count > 0 && (
+                    <>
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800 font-medium">
+                          ⚠️ {importResult?.error_count} record(s) had errors. Click the button below to download the error report.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {importResult?.imported_count > 0 && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium">
+                        ✓ {importResult?.imported_count} record(s) imported successfully!
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+
             <div className="px-5 py-3 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0 bg-gray-50 rounded-b-xl">
-              <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">Cancel</button>
-              <button onClick={processImport} disabled={importing} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50">
-                {importing ? 'Importing...' : 'Confirm Import'}
-              </button>
+              {showImportResult ? (
+                <>
+                  {importResult?.error_count > 0 && (
+                    <button
+                      onClick={downloadErrorReport}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download Error Report
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setIsImportModalOpen(false);
+                      setShowImportResult(false);
+                      setImportResult(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsImportModalOpen(false)}
+                    disabled={importing}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={processImport}
+                    disabled={importing}
+                    className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 transition"
+                  >
+                    {importing ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Confirm Import
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

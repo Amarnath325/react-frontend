@@ -274,10 +274,10 @@ const SchoolSettings: React.FC = () => {
   };
 
   const cards = [
-    { id: 'profile', title: 'School Profile', icon: '🏫', description: 'Manage school basic information, address, communication, security, social media & about', color: 'bg-blue-500' },
-    { id: 'academic', title: 'Academic Years', icon: '📅', description: 'Manage academic sessions', color: 'bg-green-500' },
-    { id: 'fee', title: 'Fee Structure', icon: '💰', description: 'Manage fee categories', color: 'bg-yellow-500' },
-    { id: 'exam', title: 'Examination System', icon: '📝', description: 'Manage exam settings', color: 'bg-purple-500' },
+    { id: 'profile', title: 'School Profile', icon: '🏫', description: 'Manage school basic information, address, communication, security, social media & about', color: 'bg-[#558fed]' },
+    { id: 'academic', title: 'Academic Years', icon: '📅', description: 'Manage academic sessions', color: 'bg-[#4e74b1]' },
+    { id: 'fee', title: 'Fee Structure', icon: '💰', description: 'Manage fee categories', color: 'bg-[#b4a67a]' },
+    { id: 'exam', title: 'Examination System', icon: '📝', description: 'Manage exam settings', color: 'bg-[#9889a5]' },
   ];
 
   const profileTabs = [
@@ -314,7 +314,7 @@ const SchoolSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-r from-[#6e799a] to-[#7874af] rounded-2xl p-6 text-white">
         <h1 className="text-2xl font-bold">School Settings</h1>
         <p className="text-blue-100 mt-1">Manage your school configuration from one place</p>
       </div>
@@ -341,7 +341,7 @@ const SchoolSettings: React.FC = () => {
       {/* ========== SCHOOL PROFILE SECTION (With Tabs) ========== */}
       {activeCard === 'profile' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#558fed] to-[#87a1d9] text-white">
             <h2 className="text-xl font-bold">School Profile</h2>
             <p className="text-blue-100 text-sm">Edit your school information</p>
           </div>
@@ -476,7 +476,7 @@ const SchoolSettings: React.FC = () => {
       {/* ========== ACADEMIC YEARS SECTION ========== */}
       {activeCard === 'academic' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white flex justify-between items-center">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#4e74b1] to-[#93a6d0] text-white flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">Academic Years</h2>
               <p className="text-green-100 text-sm">Manage academic sessions</p>
@@ -499,7 +499,7 @@ const SchoolSettings: React.FC = () => {
       {/* ========== FEE STRUCTURE SECTION ========== */}
       {activeCard === 'fee' && (
         <div className="bg-white rounded-xl shadow-lg overflow-visible">
-          <div className="px-6 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white flex justify-between items-center">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#b4a67a] to-[#b7a275] text-white flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">Fee Structure</h2>
               <p className="text-yellow-100 text-sm">Manage fee categories and amounts</p>
@@ -519,7 +519,7 @@ const SchoolSettings: React.FC = () => {
       {/* ========== EXAMINATION SYSTEM SECTION ========== */}
       {activeCard === 'exam' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white flex justify-between items-center">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#9889a5] to-[#ae8ace] text-white flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">Examination System</h2>
               <p className="text-purple-100 text-sm">Manage exam types and settings</p>
