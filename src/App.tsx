@@ -8,6 +8,12 @@ import StudentList from './pages/StudentList';
 import StudentView from './pages/StudentView';
 import SchoolRegistration from './pages/SchoolRegistration';
 import StudentRegistration from './pages/StudentRegistration';
+import StudentPromotion from './pages/StudentPromotion';
+import SectionManager from './components/SectionManager';
+import SubjectManager from './components/SubjectManager';
+import TimetableGenerator from './components/TimetableGenerator';
+import TeacherManager from './pages/TeacherManager';
+
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
 
@@ -101,10 +107,7 @@ function AppContent() {
         path="/students/promotion"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Student Promotion</h1>
-              <p className="text-gray-600">Promote students to next class</p>
-            </div>
+            <StudentPromotion />
           </ProtectedRouteWithLayout>
         }
       />
@@ -125,10 +128,7 @@ function AppContent() {
         path="/teachers/all"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">All Teachers</h1>
-              <p className="text-gray-600">Teacher list will appear here...</p>
-            </div>
+            <TeacherManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -209,10 +209,7 @@ function AppContent() {
         path="/academic/classes"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Classes & Sections</h1>
-              <p className="text-gray-600">Manage classes and sections</p>
-            </div>
+            <SectionManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -221,10 +218,7 @@ function AppContent() {
         path="/academic/subjects"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Subjects Management</h1>
-              <p className="text-gray-600">Manage subjects</p>
-            </div>
+            <SubjectManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -233,10 +227,7 @@ function AppContent() {
         path="/academic/timetable"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Timetable Generator</h1>
-              <p className="text-gray-600">Generate class timetables</p>
-            </div>
+            <TimetableGenerator />
           </ProtectedRouteWithLayout>
         }
       />
