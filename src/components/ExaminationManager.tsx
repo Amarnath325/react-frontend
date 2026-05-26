@@ -212,15 +212,18 @@ const ExaminationManager: React.FC = () => {
       const response = await api.get('/master/classes');
       if (response.data.success) {
         const classesData = response.data.data;
+        let classArray: MasterOption[] = [];
+        
+        // Convert { "12": "NURSERY", "13": "LKG", ... } to array
         if (typeof classesData === 'object' && !Array.isArray(classesData)) {
-          const classArray = Object.entries(classesData).map(([id, name]) => ({
-            value: parseInt(id),
+          classArray = Object.entries(classesData).map(([id, name]) => ({
+            value: parseInt(id),      // This is m_id from master table
             label: name as string,
           }));
-          setClasses(classArray);
-        } else {
-          setClasses(classesData || []);
         }
+        
+        console.log('Classes loaded:', classArray);
+        setClasses(classArray);
       }
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -652,107 +655,106 @@ const ExaminationManager: React.FC = () => {
     }
   };
 
-  // Handle File Upload
   // Handle File Upload - Convert Date objects to string
-const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    try {
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
-      
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      // Get all rows as array of arrays
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      
-      // Find header row
-      let headerRowIndex = -1;
-      let headers: string[] = [];
-      
-      for (let i = 0; i < rows.length; i++) {
-        const firstCell = rows[i][0];
-        if (firstCell && (firstCell === 'Academic Year' || firstCell?.toString().includes('Academic'))) {
-          headerRowIndex = i;
-          headers = rows[i].map((cell: any) => cell?.toString().trim() || '');
-          break;
-        }
-      }
-      
-      if (headerRowIndex === -1) {
-        toast.error('Could not find header row');
-        return;
-      }
-      
-      // Helper to convert date to string
-      const formatCellValue = (value: any): string => {
-        if (value instanceof Date) {
-          const year = value.getFullYear();
-          const month = String(value.getMonth() + 1).padStart(2, '0');
-          const day = String(value.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        }
-        if (value && typeof value === 'object') {
-          return '';
-        }
-        return value?.toString() || '';
-      };
-      
-      // Get data rows (skip list rows)
-      const dataRows: any[] = [];
-      for (let i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
         
-        // Skip if row starts with list data
-        const firstCell = row[0];
-        if (firstCell && (firstCell.toString().includes('_List') || 
-            firstCell === 'Academic_Year_List' ||
-            firstCell === 'Class_List' ||
-            firstCell === 'Exam_Type_List' ||
-            firstCell === 'Term_List' ||
-            firstCell === 'Status_List')) {
-          continue;
-        }
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
         
-        // Check if row has valid data
-        const hasData = row.some((cell: any) => cell && cell.toString().trim() !== '');
-        if (!hasData) continue;
+        // Get all rows as array of arrays
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         
-        const rowData: any = {};
-        for (let j = 0; j < headers.length; j++) {
-          const header = headers[j];
-          if (header && !header.includes('_List') && header !== '__EMPTY' && header !== '__EMPTY_1') {
-            rowData[header] = formatCellValue(row[j]);
+        // Find header row
+        let headerRowIndex = -1;
+        let headers: string[] = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+          const firstCell = rows[i][0];
+          if (firstCell && (firstCell === 'Academic Year' || firstCell?.toString().includes('Academic'))) {
+            headerRowIndex = i;
+            headers = rows[i].map((cell: any) => cell?.toString().trim() || '');
+            break;
           }
         }
         
-        // Only add if has required fields
-        if (rowData['Academic Year'] && rowData['Class'] && rowData['Exam Name']) {
-          dataRows.push(rowData);
+        if (headerRowIndex === -1) {
+          toast.error('Could not find header row');
+          return;
         }
+        
+        // Helper to convert date to string
+        const formatCellValue = (value: any): string => {
+          if (value instanceof Date) {
+            const year = value.getFullYear();
+            const month = String(value.getMonth() + 1).padStart(2, '0');
+            const day = String(value.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+          if (value && typeof value === 'object') {
+            return '';
+          }
+          return value?.toString() || '';
+        };
+        
+        // Get data rows (skip list rows)
+        const dataRows: any[] = [];
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+          
+          // Skip if row starts with list data
+          const firstCell = row[0];
+          if (firstCell && (firstCell.toString().includes('_List') || 
+              firstCell === 'Academic_Year_List' ||
+              firstCell === 'Class_List' ||
+              firstCell === 'Exam_Type_List' ||
+              firstCell === 'Term_List' ||
+              firstCell === 'Status_List')) {
+            continue;
+          }
+          
+          // Check if row has valid data
+          const hasData = row.some((cell: any) => cell && cell.toString().trim() !== '');
+          if (!hasData) continue;
+          
+          const rowData: any = {};
+          for (let j = 0; j < headers.length; j++) {
+            const header = headers[j];
+            if (header && !header.includes('_List') && header !== '__EMPTY' && header !== '__EMPTY_1') {
+              rowData[header] = formatCellValue(row[j]);
+            }
+          }
+          
+          // Only add if has required fields
+          if (rowData['Academic Year'] && rowData['Class'] && rowData['Exam Name']) {
+            dataRows.push(rowData);
+          }
+        }
+        
+        if (dataRows.length === 0) {
+          toast.error('No valid data found in the file.');
+          return;
+        }
+        
+        setImportData(dataRows);
+        setImportPreview(dataRows.slice(0, 5));
+        setIsImportModalOpen(true);
+        
+      } catch (error) {
+        console.error('File read error:', error);
+        toast.error('Failed to read file');
       }
-      
-      if (dataRows.length === 0) {
-        toast.error('No valid data found in the file.');
-        return;
-      }
-      
-      setImportData(dataRows);
-      setImportPreview(dataRows.slice(0, 5));
-      setIsImportModalOpen(true);
-      
-    } catch (error) {
-      console.error('File read error:', error);
-      toast.error('Failed to read file');
-    }
+    };
+    reader.readAsArrayBuffer(file);
   };
-  reader.readAsArrayBuffer(file);
-};
 
   // Helper function to convert Excel serial date to YYYY-MM-DD
   const excelDateToJSDate = (serial: number) => {
@@ -810,20 +812,19 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     return null;
   };
 
-  // Process Import
+  // Process Import - Send IDs correctly
   const processImport = async () => {
     setImporting(true);
     let successCount = 0;
     let errorCount = 0;
     const errors: any[] = [];
-    const successfulRecords: any[] = [];
 
     for (let i = 0; i < importData.length; i++) {
       const row = importData[i];
       const rowNum = i + 2;
 
       try {
-        // Validate Academic Year
+        // Get Academic Year ID
         const academicYearItem = academicYears.find(y => y.label === row['Academic Year']);
         if (!academicYearItem) {
           errors.push({ row: rowNum, error: `Academic year not found: ${row['Academic Year']}`, row_data: row });
@@ -831,7 +832,7 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           continue;
         }
 
-        // Validate Class
+        // Get Class ID - Important: Make sure classItem.value is a number
         const classItem = classes.find(c => c.label === row['Class']);
         if (!classItem) {
           errors.push({ row: rowNum, error: `Class not found: ${row['Class']}`, row_data: row });
@@ -839,25 +840,32 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           continue;
         }
 
-        // Validate Exam Type
+        // Get Exam Type ID
         let examTypeLabel = row['Exam Type'];
-        // Handle "Half Yearly Exam" vs "Half Yearly"
-        if (examTypeLabel === 'Half Yearly Exam') {
-          examTypeLabel = 'Half Yearly';
-        }
-        if (examTypeLabel === 'Annual Exam') {
-          examTypeLabel = 'Annual';
+        let examTypeItem = examTypes.find(t => t.label === examTypeLabel);
+        
+        if (!examTypeItem) {
+          examTypeItem = examTypes.find(t => 
+            t.label.toLowerCase() === examTypeLabel.toLowerCase()
+          );
         }
         
-        const examTypeItem = examTypes.find(t => t.label === examTypeLabel);
         if (!examTypeItem) {
           errors.push({ row: rowNum, error: `Exam type not found: ${row['Exam Type']}`, row_data: row });
           errorCount++;
           continue;
         }
 
-        // Validate Term
-        const termItem = termOptions.find(t => t.label === row['Term']);
+        // Get Term ID
+        let termLabel = row['Term'];
+        let termItem = termOptions.find(t => t.label === termLabel);
+        
+        if (!termItem) {
+          termItem = termOptions.find(t => 
+            t.label.toLowerCase() === termLabel.toLowerCase()
+          );
+        }
+        
         if (!termItem) {
           errors.push({ row: rowNum, error: `Term not found: ${row['Term']}`, row_data: row });
           errorCount++;
@@ -869,13 +877,13 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const endDate = formatDateToYMD(row['End Date']);
 
         if (!startDate) {
-          errors.push({ row: rowNum, error: `Invalid Start Date: ${row['Start Date']}. Use YYYY-MM-DD format`, row_data: row });
+          errors.push({ row: rowNum, error: `Invalid Start Date: ${row['Start Date']}`, row_data: row });
           errorCount++;
           continue;
         }
 
         if (!endDate) {
-          errors.push({ row: rowNum, error: `Invalid End Date: ${row['End Date']}. Use YYYY-MM-DD format`, row_data: row });
+          errors.push({ row: rowNum, error: `Invalid End Date: ${row['End Date']}`, row_data: row });
           errorCount++;
           continue;
         }
@@ -883,7 +891,7 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Validate Max Marks
         const maxMarks = parseInt(row['Max Marks']);
         if (isNaN(maxMarks) || maxMarks < 1 || maxMarks > 1000) {
-          errors.push({ row: rowNum, error: `Invalid Max Marks: ${row['Max Marks']}. Must be between 1 and 1000`, row_data: row });
+          errors.push({ row: rowNum, error: `Invalid Max Marks: ${row['Max Marks']}`, row_data: row });
           errorCount++;
           continue;
         }
@@ -891,51 +899,44 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Validate Passing Marks
         const passingMarks = parseInt(row['Passing Marks']);
         if (isNaN(passingMarks) || passingMarks < 0 || passingMarks > maxMarks) {
-          errors.push({ row: rowNum, error: `Invalid Passing Marks: ${row['Passing Marks']}. Must be between 0 and ${maxMarks}`, row_data: row });
+          errors.push({ row: rowNum, error: `Invalid Passing Marks: ${row['Passing Marks']}`, row_data: row });
           errorCount++;
           continue;
         }
 
+        // Prepare data with correct field names and types
         const submitData = {
-          academic_year_label: academicYearItem.label,
-          class_name: classItem.label,
-          exam_name: row['Exam Name'],
-          exam_type_label: examTypeItem.label,
-          term_label: termItem.label,
-          start_date: startDate,
-          end_date: endDate,
-          max_marks: maxMarks,
-          passing_marks: passingMarks,
-          status: row['Status'] || 'Active',
+          academic_year_id: Number(academicYearItem.value),  // Ensure number
+          class_id: Number(classItem.value),                 // Ensure number
+          exam_name: String(row['Exam Name']),               // Ensure string
+          exam_type_id: Number(examTypeItem.value),          // Ensure number
+          term_id: Number(termItem.value),                   // Ensure number
+          start_date: String(startDate),                     // Ensure string
+          end_date: String(endDate),                         // Ensure string
+          max_marks: Number(maxMarks),                       // Ensure number
+          passing_marks: Number(passingMarks),               // Ensure number
+          is_active: row['Status']?.toLowerCase() === 'active', // Ensure boolean
         };
 
-        console.log(`Submitting row ${rowNum}:`, submitData);
+        console.log(`Submitting row ${rowNum}:`, JSON.stringify(submitData, null, 2));
         
+        // Send as array of objects
         const response = await api.post('/school/examinations/bulk-import', { data: [submitData] });
         
         if (response.data.success) {
           successCount++;
-          successfulRecords.push({ row: rowNum, data: submitData });
         } else {
           errorCount++;
-          errors.push({ 
-            row: rowNum, 
-            error: response.data.message || 'Import failed', 
-            row_data: row 
-          });
+          errors.push({ row: rowNum, error: response.data.message || 'Import failed', row_data: row });
         }
         
       } catch (error: any) {
         errorCount++;
-        errors.push({ 
-          row: rowNum, 
-          error: error.response?.data?.message || error.message,
-          row_data: row 
-        });
+        errors.push({ row: rowNum, error: error.response?.data?.message || error.message, row_data: row });
       }
     }
 
-    // Show result and ask for error report
+    // Show results
     if (successCount > 0 && errorCount === 0) {
       toast.success(`✅ All ${successCount} record(s) imported successfully!`);
       setIsImportModalOpen(false);
@@ -957,7 +958,7 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       toast.error(`❌ All ${errorCount} record(s) failed to import.`);
       
       const shouldDownload = window.confirm(
-        `⚠️ All ${errorCount} records failed to import.\n\nDo you want to download the error report to see the issues?`
+        `⚠️ All ${errorCount} records failed to import.\n\nDo you want to download the error report?`
       );
       
       if (shouldDownload) {
@@ -1133,6 +1134,7 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
               }}
               className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
+              <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -1214,21 +1216,21 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 
       {/* Table */}
       <div className="overflow-x-auto border-y border-gray-200">
-        <table className="w-full">
+        <table className="w-full text-[12px]">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left"><input type="checkbox" checked={selectedItems.size === paginatedData.length && paginatedData.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" /></th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('academic_year_label')}>Academic Year {getSortIcon('academic_year_label')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('class_name')}>Class {getSortIcon('class_name')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>Exam Name {getSortIcon('name')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('exam_type_label')}>Exam Type {getSortIcon('exam_type_label')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('term_label')}>Term {getSortIcon('term_label')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Start Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">End Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Max Marks</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Passing Marks</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('is_active')}>Status {getSortIcon('is_active')}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('academic_year_label')}>Academic Year {getSortIcon('academic_year_label')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('class_name')}>Class {getSortIcon('class_name')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>Exam Name {getSortIcon('name')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('exam_type_label')}>Exam Type {getSortIcon('exam_type_label')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('term_label')}>Term {getSortIcon('term_label')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">Start Date</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">End Date</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('max_marks')}>Max Marks {getSortIcon('max_marks')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('passing_marks')}>Passing Marks {getSortIcon('passing_marks')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('is_active')}>Status {getSortIcon('is_active')}</th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -1257,7 +1259,26 @@ const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                   <td className="px-4 py-3 text-gray-700">{formatDisplayDate(exam.end_date)}</td>
                   <td className="px-4 py-3 text-gray-800 font-bold">{exam.max_marks}</td>
                   <td className="px-4 py-3 text-gray-700">{exam.passing_marks}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 text-xs rounded-full ${exam.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{exam.is_active ? 'Active' : 'Inactive'}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleToggleStatus(exam.id)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                          exam.is_active ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        title={exam.is_active ? 'Click to deactivate' : 'Click to activate'}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            exam.is_active ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <span className={`text-sm font-medium ${exam.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                        {exam.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEditModal(exam)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">

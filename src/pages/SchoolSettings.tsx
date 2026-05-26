@@ -315,8 +315,8 @@ const SchoolSettings: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-[#6e799a] to-[#7874af] rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold">School Settings</h1>
-        <p className="text-blue-100 mt-1">Manage your school configuration from one place</p>
+        <h1 className="text-[20px] font-bold">School Settings</h1>
+        <p className="text-blue-100 text-[16px]">Manage your school configuration from one place</p>
       </div>
 
       {/* Cards Grid */}
@@ -342,8 +342,8 @@ const SchoolSettings: React.FC = () => {
       {activeCard === 'profile' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-[#558fed] to-[#87a1d9] text-white">
-            <h2 className="text-xl font-bold">School Profile</h2>
-            <p className="text-blue-100 text-sm">Edit your school information</p>
+            <h2 className="text-[16px] font-bold">School Profile</h2>
+            <p className="text-blue-100 text-[14px]">Edit your school information</p>
           </div>
 
           {/* Profile Tabs */}
@@ -478,8 +478,8 @@ const SchoolSettings: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-[#4e74b1] to-[#93a6d0] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold">Academic Years</h2>
-              <p className="text-green-100 text-sm">Manage academic sessions</p>
+              <h2 className="text-[16px] font-bold">Academic Years</h2>
+              <p className="text-green-100 text-[14px]">Manage academic sessions</p>
             </div>
             <button 
               onClick={() => setActiveCard(null)}
@@ -499,10 +499,10 @@ const SchoolSettings: React.FC = () => {
       {/* ========== FEE STRUCTURE SECTION ========== */}
       {activeCard === 'fee' && (
         <div className="bg-white rounded-xl shadow-lg overflow-visible">
-          <div className="px-6 py-4 bg-gradient-to-r from-[#b4a67a] to-[#b7a275] text-white flex justify-between items-center">
+          <div className="px-6 py-2 bg-gradient-to-r from-[#b4a67a] to-[#b7a275] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold">Fee Structure</h2>
-              <p className="text-yellow-100 text-sm">Manage fee categories and amounts</p>
+              <h2 className="text-[16px] font-bold">Fee Structure</h2>
+              <p className="text-yellow-100 text-[14px]">Manage fee categories and amounts</p>
             </div>
             <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,10 +519,10 @@ const SchoolSettings: React.FC = () => {
       {/* ========== EXAMINATION SYSTEM SECTION ========== */}
       {activeCard === 'exam' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-[#9889a5] to-[#ae8ace] text-white flex justify-between items-center">
+          <div className="px-6 py-2 bg-gradient-to-r from-[#9889a5] to-[#ae8ace] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold">Examination System</h2>
-              <p className="text-purple-100 text-sm">Manage exam types and settings</p>
+              <h2 className="text-[16px] font-bold">Examination System</h2>
+              <p className="text-purple-100 text-[14px]">Manage exam types and settings</p>
             </div>
             <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
