@@ -75,22 +75,49 @@ const SearchableSelect: React.FC<{
       onChange={(selected) => onChange(selected ? selected.value : '')}
       placeholder={placeholder}
       isClearable={isClearable}
-      className="w-44 text-sm"
+      className="w-40 text-xs"  // Smaller width and font
       classNamePrefix="react-select"
       styles={{
-        control: (base) => ({
+        control: (base: any) => ({
           ...base,
-          borderRadius: '0.5rem',
+          borderRadius: '0.375rem',
           borderColor: '#d1d5db',
-          minHeight: '34px',
+          minHeight: '30px',
           boxShadow: 'none',
           '&:hover': { borderColor: '#9ca3af' },
         }),
-        option: (base, state) => ({
+        valueContainer: (base: any) => ({
+          ...base,
+          padding: '0 6px',
+        }),
+        input: (base: any) => ({
+          ...base,
+          margin: '0',
+          padding: '0',
+        }),
+        option: (base: any, state: any) => ({
           ...base,
           backgroundColor: state.isFocused ? '#eff6ff' : 'white',
           color: '#1f2937',
           cursor: 'pointer',
+          fontSize: '12px',
+          padding: '6px 10px',
+        }),
+        dropdownIndicator: (base: any) => ({
+          ...base,
+          padding: '2px',
+        }),
+        clearIndicator: (base: any) => ({
+          ...base,
+          padding: '2px',
+        }),
+        placeholder: (base: any) => ({
+          ...base,
+          fontSize: '12px',
+        }),
+        singleValue: (base: any) => ({
+          ...base,
+          fontSize: '12px',
         }),
       }}
     />
@@ -117,7 +144,7 @@ const FeeStructureManager: React.FC = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>('id');
@@ -1246,6 +1273,7 @@ const FeeStructureManager: React.FC = () => {
               }}
               className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
+              <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -1260,51 +1288,51 @@ const FeeStructureManager: React.FC = () => {
 
         {/* Right side: Action Buttons */}
         <div className="flex items-center gap-2">
-          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Add New
-          </button>
           <button onClick={downloadSampleFile} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Sample
           </button>
-          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             Import
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
           </label>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-700 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
             Export
+          </button>
+          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Add New
           </button>
         </div>
       </div>
 
       {/* Filters - Searchable Dropdowns (No title) */}
-      <div className="flex flex-wrap items-center gap-2 px-6 pb-4">
+      <div className="flex items-center gap-2 px-6 pb-4">
         <SearchableSelect
           options={academicYearSelectOptions}
           value={filterAcademicYear}
           onChange={setFilterAcademicYear}
-          placeholder="All Academic Years"
+          placeholder="Academic Years"
         />
         <SearchableSelect
           options={classSelectOptions}
           value={filterClass}
           onChange={setFilterClass}
-          placeholder="All Classes"
+          placeholder="Classes"
         />
         <SearchableSelect
           options={feeHeadSelectOptions}
           value={filterFeeHead}
           onChange={setFilterFeeHead}
-          placeholder="All Fee Heads"
+          placeholder="Fee Heads"
         />
         <SearchableSelect
           options={statusSelectOptions}
           value={filterStatus}
           onChange={setFilterStatus}
-          placeholder="All Status"
+          placeholder="Status"
         />
       </div>
 
@@ -1350,34 +1378,34 @@ const FeeStructureManager: React.FC = () => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
+              <th className="px-3 py-2 text-left w-10">
                 <input
                   type="checkbox"
                   checked={selectedItems.size === paginatedData.length && paginatedData.length > 0}
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded"
+                  className="rounded w-4 h-4"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
                 Academic Year {getSortIcon('academic_year_label')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
                 Class {getSortIcon('class_name')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('fee_head_label')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('fee_head_label')}>
                 Fee Head {getSortIcon('fee_head_label')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('amount')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('amount')}>
                 Amount {getSortIcon('amount')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('frequency_label')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('frequency_label')}>
                 Frequency {getSortIcon('frequency_label')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Due Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('is_active')}>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Due Date</th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('is_active')}>
                 Status {getSortIcon('is_active')}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -1388,61 +1416,63 @@ const FeeStructureManager: React.FC = () => {
                     <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p>No fee structures found</p>
+                    <p className="text-[12px]">No fee structures found</p>
+                    <button onClick={openAddModal} className="mt-2 text-blue-600 hover:text-blue-700 font-medium text-[12px]">Click here to add</button>
                   </div>
                 </td>
               </tr>
             ) : (
               paginatedData.map((item) => (
                 <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedItems.has(item.id) ? 'bg-blue-50' : ''}`}>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedItems.has(item.id)}
                       onChange={() => handleSelectRow(item.id)}
-                      className="rounded"
+                      className="rounded w-4 h-4"
                     />
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{getAcademicYearLabel(item.academic_year_id)}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{getClassName(item.class_id)}</td>
-                  <td className="px-4 py-3 text-gray-700">{getFeeHeadLabel(item.fee_head)}</td>
-                  <td className="px-4 py-3 text-gray-800 font-semibold">₹{formatAmount(item.amount)}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getAcademicYearLabel(item.academic_year_id)}</td>
+                  <td className="px-3 py-2 text-gray-700 font-medium text-[12px]">{getClassName(item.class_id)}</td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getFeeHeadLabel(item.fee_head)}</td>
+                  <td className="px-3 py-2 text-gray-800 font-semibold text-[12px]">₹{formatAmount(item.amount)}</td>
+                  <td className="px-3 py-2">
+                    <span className="px-2 py-0.5 text-[11px] bg-blue-100 text-blue-800 rounded-full">
                       {getFrequencyLabel(item.frequency)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{formatDisplayDate(item.due_date) || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(item.due_date) || '-'}</td>
+                  <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <button
-                        type="button"
                         onClick={() => handleToggleStatus(item.id)}
-                        className={`
-                          relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-                          ${item.is_active ? 'bg-green-500' : 'bg-gray-300'}
-                        `}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
+                          item.is_active ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
                         title={item.is_active ? 'Click to deactivate' : 'Click to activate'}
                       >
                         <span
-                          className={`
-                            inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform
-                            ${item.is_active ? 'translate-x-5' : 'translate-x-1'}
-                          `}
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            item.is_active ? 'translate-x-4' : 'translate-x-0.5'
+                          }`}
                         />
                       </button>
-                      <span className={`text-xs font-medium ${item.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                      <span className={`text-[11px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-500'}`}>
                         {item.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openEditModal(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => openEditModal(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
-                      <button onClick={() => handleDelete(item.id, `${getClassName(item.class_id)} - ${getFeeHeadLabel(item.fee_head)}`)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <button onClick={() => handleDelete(item.id, `${getClassName(item.class_id)} - ${getFeeHeadLabel(item.fee_head)}`)} className="p-1 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
                   </td>

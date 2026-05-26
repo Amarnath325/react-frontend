@@ -107,7 +107,9 @@ const ExaminationManager: React.FC = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5
+
+  );
   
   // Sorting states
   const [sortColumn, setSortColumn] = useState<string>('id');
@@ -1148,22 +1150,22 @@ const ExaminationManager: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={2} /></svg>
-            Add New
-          </button>
           <button onClick={downloadSampleFile} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} /></svg>
             Sample
           </button>
-          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
+          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeWidth={2} /></svg>
             Import
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
           </label>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition">
+          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-700 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeWidth={2} /></svg>
             Export
+          </button>
+          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={2} /></svg>
+            Add New
           </button>
         </div>
       </div>
@@ -1216,21 +1218,39 @@ const ExaminationManager: React.FC = () => {
 
       {/* Table */}
       <div className="overflow-x-auto border-y border-gray-200">
-        <table className="w-full text-[12px]">
+        <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left"><input type="checkbox" checked={selectedItems.size === paginatedData.length && paginatedData.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" /></th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('academic_year_label')}>Academic Year {getSortIcon('academic_year_label')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('class_name')}>Class {getSortIcon('class_name')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>Exam Name {getSortIcon('name')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('exam_type_label')}>Exam Type {getSortIcon('exam_type_label')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('term_label')}>Term {getSortIcon('term_label')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">Start Date</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">End Date</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('max_marks')}>Max Marks {getSortIcon('max_marks')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('passing_marks')}>Passing Marks {getSortIcon('passing_marks')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('is_active')}>Status {getSortIcon('is_active')}</th>
-              <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-700">Actions</th>
+              <th className="px-3 py-2 text-left">
+                <input type="checkbox" checked={selectedItems.size === paginatedData.length && paginatedData.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" />
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('academic_year_label')}>
+                Academic Year {getSortIcon('academic_year_label')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('class_name')}>
+                Class {getSortIcon('class_name')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
+                Exam Name {getSortIcon('name')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('exam_type_label')}>
+                Exam Type {getSortIcon('exam_type_label')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('term_label')}>
+                Term {getSortIcon('term_label')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Start Date</th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">End Date</th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('max_marks')}>
+                Max Marks {getSortIcon('max_marks')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('passing_marks')}>
+                Passing Marks {getSortIcon('passing_marks')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('is_active')}>
+                Status {getSortIcon('is_active')}
+              </th>
+              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -1249,43 +1269,53 @@ const ExaminationManager: React.FC = () => {
             ) : (
               paginatedData.map((exam) => (
                 <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3"><input type="checkbox" checked={selectedItems.has(exam.id)} onChange={() => handleSelectRow(exam.id)} className="w-4 h-4 text-blue-600 rounded" /></td>
-                  <td className="px-4 py-3 text-gray-700">{getAcademicYearLabel(exam.academic_year_id)}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{getClassName(exam.class_id)}</td>
-                  <td className="px-4 py-3 text-gray-700">{exam.name}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">{getExamTypeLabel(exam.exam_type)}</span></td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">{getTermLabel(exam.term)}</span></td>
-                  <td className="px-4 py-3 text-gray-700">{formatDisplayDate(exam.start_date)}</td>
-                  <td className="px-4 py-3 text-gray-700">{formatDisplayDate(exam.end_date)}</td>
-                  <td className="px-4 py-3 text-gray-800 font-bold">{exam.max_marks}</td>
-                  <td className="px-4 py-3 text-gray-700">{exam.passing_marks}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={selectedItems.has(exam.id)} onChange={() => handleSelectRow(exam.id)} className="w-4 h-4 text-blue-600 rounded" />
+                  </td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getAcademicYearLabel(exam.academic_year_id)}</td>
+                  <td className="px-3 py-2 text-gray-700 font-medium text-[12px]">{getClassName(exam.class_id)}</td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{exam.name}</td>
+                  <td className="px-3 py-2">
+                    <span className="px-2 py-0.5 text-[11px] bg-purple-100 text-purple-800 rounded-full">{getExamTypeLabel(exam.exam_type)}</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="px-2 py-0.5 text-[11px] bg-blue-100 text-blue-800 rounded-full">{getTermLabel(exam.term)}</span>
+                  </td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(exam.start_date)}</td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(exam.end_date)}</td>
+                  <td className="px-3 py-2 text-gray-800 font-semibold text-[12px]">{exam.max_marks}</td>
+                  <td className="px-3 py-2 text-gray-700 text-[12px]">{exam.passing_marks}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleToggleStatus(exam.id)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
                           exam.is_active ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                         title={exam.is_active ? 'Click to deactivate' : 'Click to activate'}
                       >
                         <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            exam.is_active ? 'translate-x-5' : 'translate-x-0.5'
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            exam.is_active ? 'translate-x-4' : 'translate-x-0.5'
                           }`}
                         />
                       </button>
-                      <span className={`text-sm font-medium ${exam.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                      <span className={`text-[11px] font-medium ${exam.is_active ? 'text-green-600' : 'text-gray-500'}`}>
                         {exam.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openEditModal(exam)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth={2} /></svg>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => openEditModal(exam)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth={2} />
+                        </svg>
                       </button>
-                      <button onClick={() => handleDelete(exam.id, exam.name)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2} /></svg>
+                      <button onClick={() => handleDelete(exam.id, exam.name)} className="p-1 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2} />
+                        </svg>
                       </button>
                     </div>
                   </td>
