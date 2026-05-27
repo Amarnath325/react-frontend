@@ -1030,24 +1030,24 @@ const SubjectManager: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-3.5 text-right pr-8">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-155">
+                    <div className="flex items-center justify-end gap-1">
                       {showTrashed ? (
                         <>
                           <button
                             onClick={() => handleRestore(item.id)}
-                            className="p-1.5 text-slate-550 hover:bg-green-50 rounded-lg hover:text-green-650 transition"
+                            className="p-1.5 text-slate-500 hover:bg-green-50 rounded-lg hover:text-green-600 transition"
                             title="Restore"
                           >
-                            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
                             </svg>
                           </button>
                           <button
                             onClick={() => handleForceDelete(item.id)}
-                            className="p-1.5 text-slate-550 hover:bg-red-50 rounded-lg hover:text-red-650 transition"
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg hover:text-red-700 transition"
                             title="Delete Permanently"
                           >
-                            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -1056,19 +1056,19 @@ const SubjectManager: React.FC = () => {
                         <>
                           <button
                             onClick={() => openEditModal(item)}
-                            className="p-1.5 text-slate-550 hover:bg-slate-100 rounded-lg hover:text-blue-600 transition"
+                            className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-blue-600 transition"
                             title="Edit"
                           >
-                            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                           </button>
                           <button
                             onClick={() => handleDelete(item.id, item.name)}
-                            className="p-1.5 text-slate-550 hover:bg-red-50 rounded-lg hover:text-red-650 transition"
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg hover:text-red-700 transition"
                             title="Delete"
                           >
-                            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -1158,6 +1158,7 @@ const SubjectManager: React.FC = () => {
                     value={formData.class_id}
                     onChange={(val) => setFormData(prev => ({ ...prev, class_id: val }))}
                     placeholder="Select Class *"
+                    required
                   />
                 </div>
 
