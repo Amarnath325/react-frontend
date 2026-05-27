@@ -157,6 +157,16 @@ export const masterService = {
       return [];
     }
   },
+
+  getSubjectTypes: async (): Promise<MasterOption[]> => {
+    try {
+      const response = await api.get('/master/subject-types');
+      return convertToOptions(response.data?.data);
+    } catch (error) {
+      console.error('Error fetching subject types:', error);
+      return [];
+    }
+  },
 };
 
 // Also export a default object for convenience

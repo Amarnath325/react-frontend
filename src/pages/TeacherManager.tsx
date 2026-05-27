@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import Select from 'react-select';
 import * as XLSX from 'xlsx';
 
 interface TeacherData {
@@ -33,43 +32,42 @@ interface ClassOption {
   label: string;
 }
 
-// Searchable Select Component
-const SearchableSelect: React.FC<{
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  isClearable?: boolean;
-}> = ({ options, value, onChange, placeholder, isClearable = true }) => {
-  const selectedOption = options.find(opt => opt.value === value) || null;
-  
-  return (
-    <Select
-      options={options}
-      value={selectedOption}
-      onChange={(selected) => onChange(selected ? selected.value : '')}
-      placeholder={placeholder}
-      isClearable={isClearable}
-      className="w-32 text-sm"
-      classNamePrefix="react-select"
-      styles={{
-        control: (base: any) => ({
-          ...base,
-          borderRadius: '0.5rem',
-          borderColor: '#d1d5db',
-          minHeight: '32px',
-          boxShadow: 'none',
-          '&:hover': { borderColor: '#9ca3af' },
-        }),
-        option: (base: any, state: any) => ({
-          ...base,
-          backgroundColor: state.isFocused ? '#eff6ff' : 'white',
-          color: '#1f2937',
-          cursor: 'pointer',
-        }),
-      }}
-    />
-  );
+const DEPARTMENTS = [
+  'Science', 'Mathematics', 'Languages', 'Social Studies',
+  'Computer Science', 'Physical Education', 'Arts', 'Commerce',
+];
+
+const DEPT_COLORS: Record<string, string> = {
+  Science: 'bg-cyan-100 text-cyan-800',
+  Mathematics: 'bg-indigo-100 text-indigo-800',
+  Languages: 'bg-yellow-100 text-yellow-800',
+  'Social Studies': 'bg-orange-100 text-orange-800',
+  'Computer Science': 'bg-violet-100 text-violet-800',
+  'Physical Education': 'bg-green-100 text-green-800',
+  Arts: 'bg-pink-100 text-pink-800',
+  Commerce: 'bg-teal-100 text-teal-800',
+};
+
+const AVATAR_COLORS = [
+  'from-blue-500 to-indigo-600',
+  'from-violet-500 to-purple-600',
+  'from-teal-500 to-cyan-600',
+  'from-rose-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-emerald-500 to-green-600',
+];
+
+const getAvatarColor = (name: string) =>
+  AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+
+const EMPTY_FORM = {
+  first_name: '', last_name: '', email: '', mobile: '',
+  gender: '', date_of_birth: '', address: '',
+  employee_id: '', qualification: '', specialization: '',
+  experience_years: 0,
+  joining_date: new Date().toISOString().split('T')[0],
+  department: '', salary: 0,
+  is_class_teacher: false, assigned_class_id: '', is_active: true,
 };
 
 const TeacherManager: React.FC = () => {
@@ -84,65 +82,30 @@ const TeacherManager: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  
-  // Pagination states
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  
-  // Sorting states
-  const [sortColumn, setSortColumn] = useState<string>('employee_id');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortColumn, setSortColumn] = useState('employee_id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  
-  // Filter states
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDepartment, setFilterDepartment] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterClassTeacher, setFilterClassTeacher] = useState<string>('');
-  
-  // Master data
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterClassTeacher, setFilterClassTeacher] = useState('');
+
   const [classes, setClasses] = useState<ClassOption[]>([]);
-  const [departments, setDepartments] = useState<string[]>([
-    'Science', 'Mathematics', 'Languages', 'Social Studies', 
-    'Computer Science', 'Physical Education', 'Arts', 'Commerce'
-  ]);
-  
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile: '',
-    gender: '',
-    date_of_birth: '',
-    address: '',
-    employee_id: '',
-    qualification: '',
-    specialization: '',
-    experience_years: 0,
-    joining_date: new Date().toISOString().split('T')[0],
-    department: '',
-    salary: 0,
-    is_class_teacher: false,
-    assigned_class_id: '',
-    is_active: true,
-  });
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
+  useEffect(() => { fetchAllData(); }, []);
 
-  useEffect(() => {
-    applyFiltersAndSorting();
-  }, [teachers, searchTerm, filterDepartment, filterStatus, filterClassTeacher, sortColumn, sortDirection]);
+  useEffect(() => { applyFiltersAndSorting(); },
+    [teachers, searchTerm, filterDepartment, filterStatus, filterClassTeacher, sortColumn, sortDirection]);
 
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchTeachers(),
-        fetchClasses(),
-      ]);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      await Promise.all([fetchTeachers(), fetchClasses()]);
+    } catch {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
@@ -150,121 +113,92 @@ const TeacherManager: React.FC = () => {
   };
 
   const fetchTeachers = async () => {
-    try {
-      const response = await api.get('/school/teachers');
-      if (response.data.success) {
-        setTeachers(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching teachers:', error);
-      toast.error('Failed to load teachers');
-    }
+    const r = await api.get('/school/teachers');
+    if (r.data.success) setTeachers(r.data.data);
   };
 
   const fetchClasses = async () => {
     try {
-      const response = await api.get('/master/classes');
-      if (response.data.success) {
-        const classesData = response.data.data;
-        let classArray: ClassOption[] = [];
-        if (typeof classesData === 'object' && !Array.isArray(classesData)) {
-          classArray = Object.entries(classesData).map(([id, name]) => ({
-            value: parseInt(id),
-            label: name as string,
-          }));
-        }
-        setClasses(classArray);
+      const r = await api.get('/master/classes');
+      if (r.data.success) {
+        const d = r.data.data;
+        setClasses(
+          typeof d === 'object' && !Array.isArray(d)
+            ? Object.entries(d).map(([id, name]) => ({ value: parseInt(id), label: name as string }))
+            : []
+        );
       }
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-    }
+    } catch { /* silent */ }
   };
 
   const applyFiltersAndSorting = () => {
     let filtered = [...teachers];
-
-    if (searchTerm) {
-      filtered = filtered.filter(item => 
-        item.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (searchTerm)
+      filtered = filtered.filter(t =>
+        t.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.user?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.user?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
+    if (filterDepartment) filtered = filtered.filter(t => t.department === filterDepartment);
+    if (filterStatus) filtered = filtered.filter(t => t.is_active.toString() === filterStatus);
+    if (filterClassTeacher) filtered = filtered.filter(t => t.is_class_teacher.toString() === filterClassTeacher);
 
-    if (filterDepartment) {
-      filtered = filtered.filter(item => item.department === filterDepartment);
-    }
-
-    if (filterStatus) {
-      filtered = filtered.filter(item => item.is_active.toString() === filterStatus);
-    }
-
-    if (filterClassTeacher) {
-      filtered = filtered.filter(item => item.is_class_teacher.toString() === filterClassTeacher);
-    }
+    filtered.sort((a, b) => {
+      let av: any, bv: any;
+      if (sortColumn === 'name') {
+        av = getFullName(a).toLowerCase(); bv = getFullName(b).toLowerCase();
+      } else if (sortColumn === 'is_active') {
+        av = a.is_active ? 1 : 0; bv = b.is_active ? 1 : 0;
+      } else {
+        av = (a as any)[sortColumn] ?? ''; bv = (b as any)[sortColumn] ?? '';
+      }
+      if (av < bv) return sortDirection === 'asc' ? -1 : 1;
+      if (av > bv) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
     setFilteredData(filtered);
     setCurrentPage(1);
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
+  const handleSort = (col: string) => {
+    if (sortColumn === col) setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortColumn(col); setSortDirection('asc'); }
   };
 
-  const getSortIcon = (column: string) => {
-    if (sortColumn !== column) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
-  };
+  const SortIcon = ({ col }: { col: string }) => (
+    <span className="ml-1 text-xs opacity-50">
+      {sortColumn !== col ? '↕' : sortDirection === 'asc' ? '↑' : '↓'}
+    </span>
+  );
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setFilterDepartment('');
-    setFilterStatus('');
-    setFilterClassTeacher('');
+    setSearchTerm(''); setFilterDepartment('');
+    setFilterStatus(''); setFilterClassTeacher('');
   };
 
+  const hasFilters = !!(searchTerm || filterDepartment || filterStatus || filterClassTeacher);
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = itemsPerPage === -1 
-    ? filteredData 
+  const paginatedData = itemsPerPage === -1
+    ? filteredData
     : filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getFullName = (t: TeacherData) =>
+    `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || 'N/A';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
   const openAddModal = () => {
     setEditingItem(null);
-    setFormData({
-      first_name: '',
-      last_name: '',
-      email: '',
-      mobile: '',
-      gender: '',
-      date_of_birth: '',
-      address: '',
-      employee_id: '',
-      qualification: '',
-      specialization: '',
-      experience_years: 0,
-      joining_date: new Date().toISOString().split('T')[0],
-      department: '',
-      salary: 0,
-      is_class_teacher: false,
-      assigned_class_id: '',
-      is_active: true,
-    });
+    setFormData({ ...EMPTY_FORM, joining_date: new Date().toISOString().split('T')[0] });
     setIsModalOpen(true);
   };
 
@@ -294,154 +228,102 @@ const TeacherManager: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.first_name || !formData.email || !formData.mobile) {
-      toast.error('Please fill all required fields');
-      return;
+    if (!formData.first_name || !formData.email || !formData.mobile || !formData.employee_id) {
+      toast.error('Please fill all required fields'); return;
     }
-
     try {
-      const submitData = {
+      const payload = {
         user_data: {
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email,
-          mobile: formData.mobile,
-          gender: formData.gender,
-          date_of_birth: formData.date_of_birth,
-          address: formData.address,
-          user_type: 'teacher',
+          first_name: formData.first_name, last_name: formData.last_name,
+          email: formData.email, mobile: formData.mobile,
+          gender: formData.gender, date_of_birth: formData.date_of_birth,
+          address: formData.address, user_type: 'teacher',
         },
         teacher_data: {
-          employee_id: formData.employee_id,
-          qualification: formData.qualification,
-          specialization: formData.specialization,
-          experience_years: formData.experience_years,
-          joining_date: formData.joining_date,
-          department: formData.department,
-          salary: formData.salary,
-          is_class_teacher: formData.is_class_teacher,
-          assigned_class_id: formData.assigned_class_id || null,
-          is_active: formData.is_active,
+          employee_id: formData.employee_id, qualification: formData.qualification,
+          specialization: formData.specialization, experience_years: formData.experience_years,
+          joining_date: formData.joining_date, department: formData.department,
+          salary: formData.salary, is_class_teacher: formData.is_class_teacher,
+          assigned_class_id: formData.assigned_class_id || null, is_active: formData.is_active,
         },
       };
-
       if (editingItem) {
-        const response = await api.put(`/school/teachers/${editingItem.id}`, submitData);
-        if (response.data.success) {
-          toast.success('Teacher updated successfully');
-        }
+        const r = await api.put(`/school/teachers/${editingItem.id}`, payload);
+        if (r.data.success) toast.success('Teacher updated successfully');
       } else {
-        const response = await api.post('/school/teachers', submitData);
-        if (response.data.success) {
-          toast.success('Teacher created successfully');
-        }
+        const r = await api.post('/school/teachers', payload);
+        if (r.data.success) toast.success('Teacher created successfully');
       }
       setIsModalOpen(false);
       fetchTeachers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Operation failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Operation failed');
     }
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (window.confirm(`Are you sure you want to delete teacher "${name}"?`)) {
-      try {
-        const response = await api.delete(`/school/teachers/${id}`);
-        if (response.data.success) {
-          toast.success('Teacher deleted successfully');
-          fetchTeachers();
-        }
-      } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Delete failed');
-      }
-    }
+    if (!window.confirm(`Delete teacher "${name}"?`)) return;
+    try {
+      const r = await api.delete(`/school/teachers/${id}`);
+      if (r.data.success) { toast.success('Teacher deleted'); fetchTeachers(); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Delete failed'); }
   };
 
   const handleToggleStatus = async (id: number) => {
     try {
-      const response = await api.patch(`/school/teachers/${id}/toggle-status`);
-      if (response.data.success) {
-        toast.success('Teacher status updated');
-        fetchTeachers();
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    }
+      const r = await api.patch(`/school/teachers/${id}/toggle-status`);
+      if (r.data.success) { toast.success('Status updated'); fetchTeachers(); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
   const handleBulkStatusUpdate = async (status: boolean) => {
     setBulkUpdating(true);
     const ids = Array.from(selectedItems);
-    
     try {
-      for (const id of ids) {
-        await api.patch(`/school/teachers/${id}/toggle-status`);
-      }
-      toast.success(`${ids.length} teacher(s) ${status ? 'activated' : 'deactivated'} successfully`);
-      setSelectedItems(new Set());
-      fetchTeachers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    } finally {
-      setBulkUpdating(false);
-    }
+      for (const id of ids) await api.patch(`/school/teachers/${id}/toggle-status`);
+      toast.success(`${ids.length} teacher(s) ${status ? 'activated' : 'deactivated'}`);
+      setSelectedItems(new Set()); fetchTeachers();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setBulkUpdating(false); }
   };
 
   const handleExport = () => {
     try {
-      const exportData = filteredData.map(item => ({
-        'Employee ID': item.employee_id,
-        'Teacher Name': `${item.user?.first_name || ''} ${item.user?.last_name || ''}`,
-        'Email': item.user?.email || '',
-        'Mobile': item.user?.mobile || '',
-        'Gender': item.user?.gender || '',
-        'Department': item.department || '',
-        'Qualification': item.qualification || '',
-        'Specialization': item.specialization || '',
-        'Experience (Years)': item.experience_years,
-        'Joining Date': item.joining_date,
-        'Salary': item.salary,
-        'Class Teacher': item.is_class_teacher ? 'Yes' : 'No',
-        'Status': item.is_active ? 'Active' : 'Inactive',
+      const data = filteredData.map(t => ({
+        'Employee ID': t.employee_id,
+        'Teacher Name': getFullName(t),
+        'Email': t.user?.email || '',
+        'Mobile': t.user?.mobile || '',
+        'Gender': t.user?.gender || '',
+        'Department': t.department || '',
+        'Qualification': t.qualification || '',
+        'Specialization': t.specialization || '',
+        'Experience (Years)': t.experience_years,
+        'Joining Date': t.joining_date,
+        'Salary': t.salary,
+        'Class Teacher': t.is_class_teacher ? 'Yes' : 'No',
+        'Status': t.is_active ? 'Active' : 'Inactive',
       }));
-
-      const ws = XLSX.utils.json_to_sheet(exportData);
+      const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Teachers');
       XLSX.writeFile(wb, `teachers_${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Export successful!');
-    } catch (error) {
-      console.error('Export error:', error);
-      toast.error('Failed to export data');
-    }
+      toast.success('Exported successfully!');
+    } catch { toast.error('Export failed'); }
   };
 
   const downloadSampleFile = () => {
-    const sampleData = [
-      {
-        'Employee ID': 'TCH001',
-        'First Name': 'Rahul',
-        'Last Name': 'Sharma',
-        'Email': 'rahul.sharma@school.com',
-        'Mobile': '9876543210',
-        'Gender': 'Male',
-        'Date of Birth': '1985-05-15',
-        'Address': 'Delhi, India',
-        'Qualification': 'M.Sc., B.Ed',
-        'Specialization': 'Mathematics',
-        'Experience (Years)': 10,
-        'Joining Date': '2015-04-01',
-        'Department': 'Mathematics',
-        'Salary': 50000,
-        'Class Teacher': 'Yes',
-        'Status': 'Active',
-      }
-    ];
-
+    const sampleData = [{
+      'Employee ID': 'TCH001', 'First Name': 'Rahul', 'Last Name': 'Sharma',
+      'Email': 'rahul.sharma@school.com', 'Mobile': '9876543210', 'Gender': 'Male',
+      'Date of Birth': '1985-05-15', 'Address': 'Delhi, India',
+      'Qualification': 'M.Sc., B.Ed', 'Specialization': 'Mathematics',
+      'Experience (Years)': 10, 'Joining Date': '2015-04-01',
+      'Department': 'Mathematics', 'Salary': 50000, 'Class Teacher': 'Yes', 'Status': 'Active',
+    }];
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sample Teachers');
+    XLSX.utils.book_append_sheet(wb, ws, 'Sample');
     XLSX.writeFile(wb, 'sample_teachers.xlsx');
     toast.success('Sample file downloaded!');
   };
@@ -449,302 +331,353 @@ const TeacherManager: React.FC = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        setImportData(jsonData);
-        setImportPreview(jsonData.slice(0, 5));
-        setIsImportModalOpen(true);
-      } catch (error) {
-        console.error('File read error:', error);
-        toast.error('Failed to read file');
-      }
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws);
+        setImportData(json); setImportPreview(json.slice(0, 5)); setIsImportModalOpen(true);
+      } catch { toast.error('Failed to read file'); }
     };
     reader.readAsArrayBuffer(file);
   };
 
   const processImport = async () => {
     setImporting(true);
-    let successCount = 0;
-    let errorCount = 0;
-    const errors: any[] = [];
-
+    let ok = 0, fail = 0;
     for (let i = 0; i < importData.length; i++) {
       const row = importData[i];
-      const rowNum = i + 2;
-
       try {
-        const submitData = {
+        await api.post('/school/teachers', {
           user_data: {
-            first_name: row['First Name'],
-            last_name: row['Last Name'] || '',
-            email: row['Email'],
-            mobile: row['Mobile'],
+            first_name: row['First Name'], last_name: row['Last Name'] || '',
+            email: row['Email'], mobile: row['Mobile'],
             gender: row['Gender']?.toLowerCase() || '',
             date_of_birth: row['Date of Birth'] || null,
-            address: row['Address'] || '',
-            user_type: 'teacher',
+            address: row['Address'] || '', user_type: 'teacher',
           },
           teacher_data: {
-            employee_id: row['Employee ID'],
-            qualification: row['Qualification'] || '',
+            employee_id: row['Employee ID'], qualification: row['Qualification'] || '',
             specialization: row['Specialization'] || '',
             experience_years: row['Experience (Years)'] || 0,
             joining_date: row['Joining Date'] || new Date().toISOString().split('T')[0],
-            department: row['Department'] || '',
-            salary: row['Salary'] || 0,
+            department: row['Department'] || '', salary: row['Salary'] || 0,
             is_class_teacher: row['Class Teacher']?.toLowerCase() === 'yes',
             is_active: row['Status']?.toLowerCase() === 'active',
           },
-        };
-
-        await api.post('/school/teachers', submitData);
-        successCount++;
-      } catch (error: any) {
-        errorCount++;
-        errors.push({ row: rowNum, error: error.response?.data?.message || error.message });
-      }
+        });
+        ok++;
+      } catch { fail++; }
     }
-
-    toast.success(`Import completed: ${successCount} success, ${errorCount} failed`);
-    setIsImportModalOpen(false);
-    fetchTeachers();
-    setImporting(false);
-  };
-
-  const getFullName = (teacher: TeacherData) => {
-    return `${teacher.user?.first_name || ''} ${teacher.user?.last_name || ''}`.trim() || 'N/A';
+    toast.success(`Import done: ${ok} success, ${fail} failed`);
+    setIsImportModalOpen(false); fetchTeachers(); setImporting(false);
   };
 
   const handleSelectRow = (id: number) => {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedItems(newSelected);
+    const s = new Set(selectedItems);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelectedItems(s);
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.size === paginatedData.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(paginatedData.map(item => item.id)));
-    }
+    setSelectedItems(
+      selectedItems.size === paginatedData.length && paginatedData.length > 0
+        ? new Set()
+        : new Set(paginatedData.map(t => t.id))
+    );
   };
 
-  if (loading) {
+  // ─── stats ───────────────────────────────────────────────
+  const totalActive = teachers.filter(t => t.is_active).length;
+  const totalClassTeachers = teachers.filter(t => t.is_class_teacher).length;
+
+  // ─── shared input classes ────────────────────────────────
+  const inp = 'w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white';
+  const lbl = 'block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide';
+
+  if (loading)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-2 text-[13px] text-gray-600">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent" />
+          <p className="mt-3 text-sm text-gray-500">Loading teachers…</p>
         </div>
       </div>
     );
-  }
 
   return (
-    <div className="-mx-6 -mt-6">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Teacher Management</h3>
-        <p className="text-sm text-gray-500">Manage teachers, qualifications, and assignments</p>
+    <div className="-mx-6 -mt-6 flex flex-col min-h-screen bg-gray-50/60">
+
+      {/* ── Top Header ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Staff Management</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Manage staff profiles, qualifications &amp; class assignments</p>
+          </div>
+          {/* stat pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-100">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[13px] font-semibold text-blue-800">{teachers.length}</span>
+              <span className="text-[13px] text-blue-600">Total</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-xl border border-green-100">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-[13px] font-semibold text-green-800">{totalActive}</span>
+              <span className="text-[13px] text-green-600">Active</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border border-purple-100">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="text-[13px] font-semibold text-purple-800">{totalClassTeachers}</span>
+              <span className="text-[13px] text-purple-600">Class Teachers</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Action Buttons, Search and Show */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Search:</span>
+      {/* ── Toolbar ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center flex-wrap gap-3">
+
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
-              type="text"
-              placeholder="Name, ID or Email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              type="text" placeholder="Search name, ID or email…"
+              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              className="pl-9 pr-3 py-2 w-full border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                const val = e.target.value === 'all' ? -1 : Number(e.target.value);
-                setItemsPerPage(val);
-                setCurrentPage(1);
-              }}
-              className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+
+          {/* Filters */}
+          <select value={filterDepartment} onChange={e => setFilterDepartment(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Departments</option>
+            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+
+          <select value={filterClassTeacher} onChange={e => setFilterClassTeacher(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Types</option>
+            <option value="true">Class Teacher</option>
+            <option value="false">Subject Teacher</option>
+          </select>
+
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Status</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+
+          {hasFilters && (
+            <button onClick={clearFilters}
+              className="flex items-center gap-1 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Clear
+            </button>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Show select */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-gray-500 whitespace-nowrap">Rows:</span>
+            <select value={itemsPerPage}
+              onChange={e => { setItemsPerPage(e.target.value === 'all' ? -1 : Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-2 border border-gray-200 rounded-lg text-[13px] bg-gray-50 focus:outline-none">
+              {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
               <option value="all">All</option>
             </select>
           </div>
-          {(searchTerm || filterDepartment || filterClassTeacher || filterStatus) && (
-            <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700">Clear Filters ✕</button>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={downloadSampleFile} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition">
-            Sample
-          </button>
-          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition cursor-pointer">
-            Import
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
-          </label>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 transition">
-            Export
-          </button>
-          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition">
-            Add New
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 px-6 pb-4">
-        <select
-          value={filterDepartment}
-          onChange={(e) => setFilterDepartment(e.target.value)}
-          className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="">Department</option>
-          {departments.map(dept => (<option key={dept} value={dept}>{dept}</option>))}
-        </select>
-        <select
-          value={filterClassTeacher}
-          onChange={(e) => setFilterClassTeacher(e.target.value)}
-          className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="">Teacher Type</option>
-          <option value="true">Class Teacher</option>
-          <option value="false">Subject Teacher</option>
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="">Status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-      </div>
-
-      {/* Bulk Actions Bar */}
-      {selectedItems.size > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-blue-800 font-medium">{selectedItems.size} teacher(s) selected</div>
+          {/* Action buttons */}
           <div className="flex items-center gap-2">
-            <button onClick={() => handleBulkStatusUpdate(true)} disabled={bulkUpdating} className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50">
-              Activate
+            <button onClick={downloadSampleFile}
+              className="px-3 py-2 text-[13px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
+              Sample
             </button>
-            <button onClick={() => handleBulkStatusUpdate(false)} disabled={bulkUpdating} className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-              Deactivate
+            <label className="px-3 py-2 text-[13px] bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-medium cursor-pointer">
+              Import
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} className="hidden" />
+            </label>
+            <button onClick={handleExport}
+              className="px-3 py-2 text-[13px] bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition font-medium">
+              Export
             </button>
-            <button onClick={() => setSelectedItems(new Set())} className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition">
+            <button onClick={openAddModal}
+              className="flex items-center gap-1.5 px-3 py-2 text-[13px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Teacher
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bulk Action Bar ── */}
+      {selectedItems.size > 0 && (
+        <div className="bg-blue-600 px-6 py-2.5 flex items-center justify-between gap-4">
+          <span className="text-sm text-white font-medium">{selectedItems.size} teacher(s) selected</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => handleBulkStatusUpdate(true)} disabled={bulkUpdating}
+              className="px-3 py-1.5 bg-white text-green-700 text-[13px] rounded-lg font-medium hover:bg-green-50 disabled:opacity-50 transition">
+              ✓ Activate
+            </button>
+            <button onClick={() => handleBulkStatusUpdate(false)} disabled={bulkUpdating}
+              className="px-3 py-1.5 bg-white text-red-700 text-[13px] rounded-lg font-medium hover:bg-red-50 disabled:opacity-50 transition">
+              ✕ Deactivate
+            </button>
+            <button onClick={() => setSelectedItems(new Set())}
+              className="px-3 py-1.5 bg-blue-500 text-white text-[13px] rounded-lg hover:bg-blue-400 transition">
               Clear
             </button>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto border-y border-gray-200">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left w-10">
-                <input type="checkbox" checked={selectedItems.size === paginatedData.length && paginatedData.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" />
+      {/* ── Table ── */}
+      <div className="flex-1 overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100 border-b border-gray-200">
+              <th className="pl-6 pr-3 py-3 w-10 text-left">
+                <input type="checkbox"
+                  checked={selectedItems.size === paginatedData.length && paginatedData.length > 0}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 cursor-pointer"
+                />
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('employee_id')}>
-                Employee ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('name')}>
-                Teacher Name
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Mobile</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Experience</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Class Teacher</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('is_active')}>
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              {[
+                { label: 'Employee ID', col: 'employee_id' },
+                { label: 'Teacher', col: 'name' },
+                { label: 'Contact', col: null },
+                { label: 'Department', col: null },
+                { label: 'Experience', col: 'experience_years' },
+                { label: 'Class Teacher', col: null },
+                { label: 'Status', col: 'is_active' },
+                { label: 'Actions', col: null },
+              ].map(({ label, col }) => (
+                <th key={label}
+                  className={`px-4 py-3 text-left text-[12px] font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap ${col ? 'cursor-pointer hover:text-gray-900 select-none' : ''}`}
+                  onClick={col ? () => handleSort(col) : undefined}>
+                  {label}
+                  {col && <SortIcon col={col} />}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+
+          <tbody className="bg-white divide-y divide-gray-100">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    <p>No teachers found</p>
-                    <button onClick={openAddModal} className="mt-2 text-blue-600 hover:text-blue-700 font-medium">Click here to add</button>
+                <td colSpan={9} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-sm">{hasFilters ? 'No teachers match your filters.' : 'No teachers added yet.'}</p>
+                    {!hasFilters && (
+                      <button onClick={openAddModal} className="text-blue-600 text-sm font-medium hover:underline">
+                        Add your first teacher →
+                      </button>
+                    )}
+                    {hasFilters && (
+                      <button onClick={clearFilters} className="text-blue-600 text-sm font-medium hover:underline">
+                        Clear filters
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
             ) : (
-              paginatedData.map((item, idx) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3"><input type="checkbox" checked={selectedItems.has(item.id)} onChange={() => handleSelectRow(item.id)} className="w-4 h-4 text-blue-600 rounded" /></td>
-                  <td className="px-4 py-3 text-gray-700 font-mono">{item.employee_id}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {getFullName(item).charAt(0)}
-                      </div>
-                      <span className="font-medium text-gray-800">{getFullName(item)}</span>
-                    </div>
+              paginatedData.map(item => (
+                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <td className="pl-6 pr-3 py-3">
+                    <input type="checkbox" checked={selectedItems.has(item.id)}
+                      onChange={() => handleSelectRow(item.id)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 cursor-pointer"
+                    />
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{item.user?.email || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{item.user?.mobile || '-'}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
-                      {item.department || '-'}
+                    <span className="font-mono text-[13px] text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                      {item.employee_id}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{item.experience_years} yrs</td>
-                  <td className="px-4 py-3 text-center">
-                    {item.is_class_teacher ? (
-                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Yes</span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">No</span>
-                    )}
-                  </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleToggleStatus(item.id)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${item.is_active ? 'bg-green-500' : 'bg-gray-300'}`}>
-                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${item.is_active ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                      </button>
-                      <span className={`text-[11px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-500'}`}>
-                        {item.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(getFullName(item))} flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0`}>
+                        {getFullName(item).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-semibold text-gray-900 leading-tight">{getFullName(item)}</p>
+                        <p className="text-[12px] text-gray-400">{item.qualification || 'N/A'}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openEditModal(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth={2} /></svg>
+                    <p className="text-[13px] text-gray-700">{item.user?.email || '—'}</p>
+                    <p className="text-[12px] text-gray-400 mt-0.5">{item.user?.mobile || '—'}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.department
+                      ? <span className={`px-2.5 py-1 text-[12px] font-medium rounded-full ${DEPT_COLORS[item.department] || 'bg-gray-100 text-gray-700'}`}>
+                        {item.department}
+                      </span>
+                      : <span className="text-gray-400 text-[13px]">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[14px] font-semibold text-gray-800">{item.experience_years}</span>
+                      <span className="text-[12px] text-gray-400">yrs</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {item.is_class_teacher
+                      ? <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium bg-green-100 text-green-800 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Yes
+                      </span>
+                      : <span className="text-[12px] text-gray-400">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => handleToggleStatus(item.id)}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full text-[12px] font-medium transition-colors border
+                        ${item.is_active
+                          ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`}>
+                      <span className={`w-2 h-2 rounded-full ${item.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      {item.is_active ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEditModal(item)} title="Edit"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
-                      <button onClick={() => handleDelete(item.id, getFullName(item))} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2} /></svg>
+                      <button onClick={() => handleDelete(item.id, getFullName(item))} title="Delete"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -755,339 +688,272 @@ const TeacherManager: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* ── Pagination ── */}
       {totalPages > 1 && itemsPerPage !== -1 && (
-        <div className="flex justify-end items-center px-6 py-4 gap-2">
-          <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">«</button>
-          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">‹</button>
-          <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
-          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">›</button>
-          <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">»</button>
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between">
+          <p className="text-[13px] text-gray-500">
+            Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
+              className="px-2 py-1.5 rounded text-[13px] border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition">«</button>
+            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
+              className="px-2 py-1.5 rounded text-[13px] border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition">‹</button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let page = i + 1;
+              if (totalPages > 5) {
+                if (currentPage <= 3) page = i + 1;
+                else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                else page = currentPage - 2 + i;
+              }
+              return (
+                <button key={page} onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded text-[13px] border transition ${currentPage === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>
+                  {page}
+                </button>
+              );
+            })}
+            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+              className="px-2 py-1.5 rounded text-[13px] border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition">›</button>
+            <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
+              className="px-2 py-1.5 rounded text-[13px] border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition">»</button>
+          </div>
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* ═══════════════════════════════════════════════════════
+          ADD / EDIT MODAL
+      ═══════════════════════════════════════════════════════ */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden animate-fade-in-up">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5">
-                <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-sm font-bold text-white">
-                    {editingItem ? 'Edit Teacher' : 'Add New Teacher'}
-                    </h3>
-                    <p className="text-blue-100 text-[10px] mt-0.5">
-                    {editingItem ? 'Update teacher information' : 'Fill teacher details'}
-                    </p>
-                </div>
-                <button 
-                    onClick={() => setIsModalOpen(false)} 
-                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1 transition"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">
+                  {editingItem ? 'Edit Teacher' : 'Add New Teacher'}
+                </h3>
+                <p className="text-[12px] text-gray-500 mt-0.5">
+                  {editingItem ? `Editing profile for ${getFullName(editingItem)}` : 'Fill in teacher details below'}
+                </p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form id="teacher-form" onSubmit={handleSubmit}
+              className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+
+              {/* Section: Personal */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                </button>
+                  </div>
+                  <h4 className="text-[13px] font-semibold text-gray-800">Personal Information</h4>
                 </div>
-            </div>
-            
-            {/* Form Body - Scrollable */}
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-100px)]">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Personal Information */}
-                <div>
-                    <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
-                    <span className="text-blue-500 text-sm">👤</span>
-                    <span>Personal Information</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                        First Name <span className="text-red-500">*</span>
-                        </label>
-                        <input 
-                        type="text" 
-                        name="first_name" 
-                        value={formData.first_name} 
-                        onChange={handleInputChange} 
-                        placeholder="e.g., Rahul"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" 
-                        required 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Last Name</label>
-                        <input 
-                        type="text" 
-                        name="last_name" 
-                        value={formData.last_name} 
-                        onChange={handleInputChange} 
-                        placeholder="e.g., Sharma"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                        Email <span className="text-red-500">*</span>
-                        </label>
-                        <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleInputChange} 
-                        placeholder="teacher@school.com"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition" 
-                        required 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                        Mobile <span className="text-red-500">*</span>
-                        </label>
-                        <input 
-                        type="tel" 
-                        name="mobile" 
-                        value={formData.mobile} 
-                        onChange={handleInputChange} 
-                        placeholder="9876543210"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition" 
-                        required 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Gender</label>
-                        <select 
-                        name="gender" 
-                        value={formData.gender} 
-                        onChange={handleInputChange} 
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                        <option value="">Select</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Date of Birth</label>
-                        <input 
-                        type="date" 
-                        name="date_of_birth" 
-                        value={formData.date_of_birth} 
-                        onChange={handleInputChange} 
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                        />
-                    </div>
-                    <div className="sm:col-span-2">
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Address</label>
-                        <textarea 
-                        name="address" 
-                        value={formData.address} 
-                        onChange={handleInputChange} 
-                        rows={1} 
-                        placeholder="Enter complete address"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition" 
-                        />
-                    </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>First Name <span className="text-red-500 normal-case">*</span></label>
+                    <input type="text" name="first_name" value={formData.first_name} onChange={handleInputChange}
+                      placeholder="Rahul" className={inp} required />
+                  </div>
+                  <div>
+                    <label className={lbl}>Last Name</label>
+                    <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange}
+                      placeholder="Sharma" className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Email <span className="text-red-500 normal-case">*</span></label>
+                    <input type="email" name="email" value={formData.email} onChange={handleInputChange}
+                      placeholder="teacher@school.com" className={inp} required />
+                  </div>
+                  <div>
+                    <label className={lbl}>Mobile <span className="text-red-500 normal-case">*</span></label>
+                    <input type="tel" name="mobile" value={formData.mobile} onChange={handleInputChange}
+                      placeholder="9876543210" className={inp} required />
+                  </div>
+                  <div>
+                    <label className={lbl}>Gender</label>
+                    <select name="gender" value={formData.gender} onChange={handleInputChange} className={inp}>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Date of Birth</label>
+                    <input type="date" name="date_of_birth" value={formData.date_of_birth}
+                      onChange={handleInputChange} className={inp} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className={lbl}>Address</label>
+                    <textarea name="address" value={formData.address} onChange={handleInputChange}
+                      rows={2} placeholder="Enter full address" className={inp} />
+                  </div>
                 </div>
+              </section>
 
-                {/* Professional Information */}
-                <div>
-                    <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
-                    <span className="text-green-500 text-sm">💼</span>
-                    <span>Professional Information</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                        Employee ID <span className="text-red-500">*</span>
-                        </label>
-                        <input 
-                        type="text" 
-                        name="employee_id" 
-                        value={formData.employee_id} 
-                        onChange={handleInputChange} 
-                        placeholder="TCH001"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition" 
-                        required 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Department</label>
-                        <select 
-                        name="department" 
-                        value={formData.department} 
-                        onChange={handleInputChange} 
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                        <option value="">Select</option>
-                        <option value="Science">Science</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Languages">Languages</option>
-                        <option value="Computer Science">CS</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Qualification</label>
-                        <input 
-                        type="text" 
-                        name="qualification" 
-                        value={formData.qualification} 
-                        onChange={handleInputChange} 
-                        placeholder="M.Sc., B.Ed"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg transition" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Specialization</label>
-                        <input 
-                        type="text" 
-                        name="specialization" 
-                        value={formData.specialization} 
-                        onChange={handleInputChange} 
-                        placeholder="Mathematics"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg transition" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Experience (Years)</label>
-                        <input 
-                        type="number" 
-                        name="experience_years" 
-                        value={formData.experience_years} 
-                        onChange={handleInputChange} 
-                        min="0" 
-                        step="1"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg transition" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Joining Date</label>
-                        <input 
-                        type="date" 
-                        name="joining_date" 
-                        value={formData.joining_date} 
-                        onChange={handleInputChange} 
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg transition" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Salary (Monthly)</label>
-                        <input 
-                        type="number" 
-                        name="salary" 
-                        value={formData.salary} 
-                        onChange={handleInputChange} 
-                        min="0" 
-                        step="1000"
-                        placeholder="0"
-                        className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg transition" 
-                        />
-                    </div>
-                    </div>
-                </div>
+              {/* Divider */}
+              <hr className="border-gray-100" />
 
-                {/* Assignment */}
-                <div>
-                    <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
-                    <span className="text-purple-500 text-sm">📋</span>
-                    <span>Assignment</span>
-                    </h4>
-                    <div className="space-y-2 bg-gray-50 p-2.5 rounded-lg">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                        type="checkbox" 
-                        name="is_class_teacher" 
-                        checked={formData.is_class_teacher} 
-                        onChange={handleInputChange} 
-                        className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500" 
-                        />
-                        <span className="text-xs text-gray-700">Class Teacher</span>
-                    </label>
-                    {formData.is_class_teacher && (
-                        <div className="ml-5">
-                        <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Assign Class</label>
-                        <select 
-                            name="assigned_class_id" 
-                            value={formData.assigned_class_id} 
-                            onChange={handleInputChange} 
-                            className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Select Class</option>
-                            {classes.map(cls => (
-                            <option key={cls.value} value={cls.value}>{cls.label}</option>
-                            ))}
-                        </select>
-                        </div>
-                    )}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                        type="checkbox" 
-                        name="is_active" 
-                        checked={formData.is_active} 
-                        onChange={handleInputChange} 
-                        className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500" 
-                        />
-                        <span className="text-xs text-gray-700">Active</span>
-                    </label>
-                    </div>
+              {/* Section: Professional */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-[13px] font-semibold text-gray-800">Professional Information</h4>
                 </div>
-                </form>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>Employee ID <span className="text-red-500 normal-case">*</span></label>
+                    <input type="text" name="employee_id" value={formData.employee_id} onChange={handleInputChange}
+                      placeholder="TCH001" className={inp} required />
+                  </div>
+                  <div>
+                    <label className={lbl}>Department</label>
+                    <select name="department" value={formData.department} onChange={handleInputChange} className={inp}>
+                      <option value="">Select department</option>
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Qualification</label>
+                    <input type="text" name="qualification" value={formData.qualification}
+                      onChange={handleInputChange} placeholder="M.Sc., B.Ed" className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Specialization</label>
+                    <input type="text" name="specialization" value={formData.specialization}
+                      onChange={handleInputChange} placeholder="e.g. Mathematics" className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Experience (Years)</label>
+                    <input type="number" name="experience_years" value={formData.experience_years}
+                      onChange={handleInputChange} min="0" step="1" className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Joining Date</label>
+                    <input type="date" name="joining_date" value={formData.joining_date}
+                      onChange={handleInputChange} className={inp} />
+                  </div>
+                </div>
+              </section>
 
-            {/* Footer Buttons */}
-            <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
-                <button 
-                type="button" 
-                onClick={() => setIsModalOpen(false)} 
-                className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition font-medium"
-                >
+              {/* Divider */}
+              <hr className="border-gray-100" />
+
+              {/* Section: Assignment */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <h4 className="text-[13px] font-semibold text-gray-800">Assignment &amp; Status</h4>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="is_class_teacher" checked={formData.is_class_teacher}
+                      onChange={handleInputChange}
+                      className="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                    <div>
+                      <p className="text-[13px] font-medium text-gray-800">Class Teacher</p>
+                      <p className="text-[12px] text-gray-400">Assign this teacher as a homeroom/class teacher</p>
+                    </div>
+                  </label>
+                  {formData.is_class_teacher && (
+                    <div className="ml-7">
+                      <label className={lbl}>Assign Class</label>
+                      <select name="assigned_class_id" value={formData.assigned_class_id}
+                        onChange={handleInputChange} className={inp}>
+                        <option value="">Select class</option>
+                        {classes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="is_active" checked={formData.is_active}
+                      onChange={handleInputChange}
+                      className="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                    <div>
+                      <p className="text-[13px] font-medium text-gray-800">Active</p>
+                      <p className="text-[12px] text-gray-400">Teacher can log in and access the system</p>
+                    </div>
+                  </label>
+                </div>
+              </section>
+            </form>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+              <button type="button" onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-[13px] font-medium border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">
                 Cancel
-                </button>
-                <button 
-                type="submit" 
-                onClick={handleSubmit} 
-                className="px-4 py-1.5 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition font-medium shadow-sm"
-                >
+              </button>
+              <button type="submit" form="teacher-form"
+                className="px-5 py-2 text-[13px] font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
                 {editingItem ? 'Update Teacher' : 'Create Teacher'}
-                </button>
+              </button>
             </div>
-            </div>
+          </div>
         </div>
-        )}
+      )}
 
-      {/* Import Modal */}
+      {/* ═══════════════════════════════════════════════════════
+          IMPORT MODAL
+      ═══════════════════════════════════════════════════════ */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 rounded-t-xl flex-shrink-0">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-white">Import Teachers</h3>
-                <button onClick={() => setIsImportModalOpen(false)} className="text-white hover:bg-white/20 rounded-lg p-1 transition">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={2} /></svg>
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Import Teachers</h3>
+                <p className="text-[12px] text-gray-500 mt-0.5">
+                  Preview — {importData.length} record{importData.length !== 1 ? 's' : ''} found (showing first 5)
+                </p>
               </div>
+              <button onClick={() => setIsImportModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-5 overflow-y-auto flex-1">
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800"><strong>Total Records:</strong> {importData.length} | <strong>Preview (First 5 rows):</strong></p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border border-gray-200">
-                  <thead className="bg-gray-100">
+
+            <div className="flex-1 overflow-auto p-6">
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      {importPreview.length > 0 && Object.keys(importPreview[0]).map((key, idx) => (
-                        <th key={idx} className="px-3 py-2 text-left border">{key}</th>
+                      {importPreview.length > 0 && Object.keys(importPreview[0]).map((key, i) => (
+                        <th key={i} className="px-4 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap">{key}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
-                    {importPreview.map((row, idx) => (
-                      <tr key={idx} className="border-t">
-                        {Object.values(row).map((val: any, colIdx) => (
-                          <td key={colIdx} className="px-3 py-2 border">{val}</td>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {importPreview.map((row, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        {Object.values(row).map((val: any, j) => (
+                          <td key={j} className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{String(val ?? '—')}</td>
                         ))}
                       </tr>
                     ))}
@@ -1095,11 +961,21 @@ const TeacherManager: React.FC = () => {
                 </table>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0 bg-gray-50 rounded-b-xl">
-              <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">Cancel</button>
-              <button onClick={processImport} disabled={importing} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50">
-                {importing ? 'Importing...' : 'Confirm Import'}
-              </button>
+
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+              <p className="text-[13px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                ⚠ Duplicate emails or employee IDs will cause individual row failures.
+              </p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setIsImportModalOpen(false)}
+                  className="px-4 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">
+                  Cancel
+                </button>
+                <button onClick={processImport} disabled={importing}
+                  className="px-5 py-2 text-[13px] font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 shadow-sm">
+                  {importing ? 'Importing…' : `Import ${importData.length} Record${importData.length !== 1 ? 's' : ''}`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
