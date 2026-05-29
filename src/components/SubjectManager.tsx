@@ -144,6 +144,7 @@ const SubjectManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SubjectData | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -310,6 +311,10 @@ const SubjectManager: React.FC = () => {
     fetchSubjects();
   }, [showTrashed]);
 
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [searchTerm, filterClass, filterSubjectType, filterStatus, showTrashed, currentPage]);
+
   const handleRestore = async (id: number) => {
     if (!confirm('Are you sure you want to restore this subject?')) return;
     try {
@@ -439,6 +444,32 @@ const SubjectManager: React.FC = () => {
   const paginatedData = itemsPerPage === -1
     ? filteredData
     : filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+  const handleSelectAllToggle = () => {
+    if (isAllSelected) {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => {
+        const newSelection = [...prev];
+        pageIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
+    }
+  };
+
+  const handleSelectRow = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -606,6 +637,63 @@ const SubjectManager: React.FC = () => {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed');
+    }
+  };
+
+  const handleBulkStatus = async (status: 'active' | 'inactive') => {
+    if (selectedIds.length === 0) return;
+    try {
+      const response = await api.post('/school/subjects/bulk-status', {
+        status,
+        ids: selectedIds
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Status updated successfully');
+        setSelectedIds([]);
+        fetchSubjects();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmMessage = showTrashed
+      ? `Are you sure you want to permanently delete these ${selectedIds.length} subjects? This action cannot be undone.`
+      : `Are you sure you want to delete these ${selectedIds.length} subjects?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const response = await api.post('/school/subjects/bulk-delete', {
+        ids: selectedIds,
+        force: showTrashed
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Subjects deleted successfully');
+        setSelectedIds([]);
+        fetchSubjects();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete subjects');
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to restore these ${selectedIds.length} subjects?`)) return;
+
+    try {
+      const response = await api.post('/school/subjects/bulk-restore', {
+        ids: selectedIds
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Subjects restored successfully');
+        setSelectedIds([]);
+        fetchSubjects();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to restore subjects');
     }
   };
 
@@ -919,10 +1007,88 @@ const SubjectManager: React.FC = () => {
           <span>You are viewing deleted subjects. You can restore them or permanently delete them below.</span>
         </div>
       )}
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
+          <div className="text-sm text-blue-800 font-medium">
+            {selectedIds.length} item(s) selected
+          </div>
+          <div className="flex items-center gap-2">
+            {!showTrashed ? (
+              <>
+                <button
+                  onClick={() => handleBulkStatus('active')}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Active
+                </button>
+                <button
+                  onClick={() => handleBulkStatus('inactive')}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Inactive
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleBulkRestore}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
+                  </svg>
+                  Restore
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete Permanently
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-x-auto bg-white">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-slate-50/80">
+              <th className="px-6 py-3.5 w-12 text-center">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleSelectAllToggle}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition cursor-pointer"
+                />
+              </th>
               <th
                 onClick={() => handleSort('class_name')}
                 className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer select-none hover:text-slate-700 transition-colors"
@@ -961,7 +1127,7 @@ const SubjectManager: React.FC = () => {
           <tbody className="divide-y divide-gray-200 bg-white">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-16 text-center">
+                <td colSpan={10} className="px-6 py-16 text-center">
                   <div className="flex flex-col items-center justify-center max-w-md mx-auto">
                     <div className="bg-slate-50 p-4 rounded-full border border-slate-100 text-slate-400 mb-4 animate-pulse">
                       <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -982,6 +1148,14 @@ const SubjectManager: React.FC = () => {
             ) : (
               paginatedData.map((item) => (
                 <tr key={item.id} className="hover:bg-blue-50/10 transition-colors group">
+                  <td className="px-6 py-3.5 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={() => handleSelectRow(item.id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition cursor-pointer"
+                    />
+                  </td>
                   <td className="px-6 py-3.5 text-sm font-semibold text-gray-800">{getClassName(item.class_id)}</td>
                   <td className="px-6 py-3.5 text-sm text-gray-900 font-medium">{item.name}</td>
                   <td className="px-6 py-3.5 text-sm text-slate-500 font-mono">{item.code || '—'}</td>
