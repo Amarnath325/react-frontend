@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
+import Select from 'react-select';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface TeacherData {
   id: number;
@@ -16,6 +19,8 @@ interface TeacherData {
   salary: number;
   is_class_teacher: boolean;
   is_active: boolean;
+  assigned_class_id?: number | null;
+  assigned_class_name?: string | null;
   user?: {
     first_name: string;
     last_name: string;
@@ -60,6 +65,101 @@ const AVATAR_COLORS = [
 const getAvatarColor = (name: string) =>
   AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
+const customSelectStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    borderRadius: '0.5rem',
+    borderColor: state.isFocused ? '#3b82f6' : '#e5e7eb',
+    boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.15)' : 'none',
+    minHeight: '38px',
+    backgroundColor: '#ffffff',
+    borderColorHover: state.isFocused ? '#3b82f6' : '#d1d5db',
+    '&:hover': {
+      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+    },
+    transition: 'all 0.15s ease',
+  }),
+  valueContainer: (base: any) => ({
+    ...base,
+    padding: '0 12px',
+  }),
+  input: (base: any) => ({
+    ...base,
+    margin: '0',
+    padding: '0',
+    fontSize: '13px',
+    color: '#111827',
+  }),
+  placeholder: (base: any) => ({
+    ...base,
+    fontSize: '13px',
+    color: '#9ca3af',
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    fontSize: '13px',
+    color: '#111827',
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? '#2563eb'
+      : state.isFocused
+        ? '#f3f4f6'
+        : 'transparent',
+    color: state.isSelected ? '#ffffff' : '#374151',
+    fontSize: '13px',
+    padding: '8px 12px',
+    cursor: 'pointer',
+    '&:active': {
+      backgroundColor: state.isSelected ? '#2563eb' : '#e5e7eb',
+    },
+  }),
+  menu: (base: any) => ({
+    ...base,
+    borderRadius: '0.5rem',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    border: '1px solid #e5e7eb',
+    marginTop: '4px',
+    zIndex: 9999,
+  }),
+};
+
+interface SearchableSelectProps {
+  options: { value: string | number; label: string }[];
+  value: string | number;
+  onChange: (value: string) => void;
+  placeholder: string;
+  isClearable?: boolean;
+  className?: string;
+  required?: boolean;
+}
+
+const SearchableSelect: React.FC<SearchableSelectProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  isClearable = false,
+  className = "",
+}) => {
+  const selectedOption = options.find(opt => String(opt.value) === String(value)) || null;
+
+  return (
+    <div className={className}>
+      <Select
+        options={options}
+        value={selectedOption}
+        onChange={(selected) => onChange(selected ? String(selected.value) : '')}
+        placeholder={placeholder}
+        isClearable={isClearable}
+        styles={customSelectStyles}
+        className="text-[13px]"
+      />
+    </div>
+  );
+};
+
 const EMPTY_FORM = {
   first_name: '', last_name: '', email: '', mobile: '',
   gender: '', date_of_birth: '', address: '',
@@ -82,6 +182,7 @@ const TeacherManager: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [showTrashed, setShowTrashed] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -96,25 +197,36 @@ const TeacherManager: React.FC = () => {
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
-  useEffect(() => { fetchAllData(); }, []);
+  useEffect(() => {
+    fetchClasses();
+  }, []);
 
-  useEffect(() => { applyFiltersAndSorting(); },
-    [teachers, searchTerm, filterDepartment, filterStatus, filterClassTeacher, sortColumn, sortDirection]);
+  useEffect(() => {
+    fetchTeachers();
+  }, [showTrashed]);
 
-  const fetchAllData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    applyFiltersAndSorting();
+  }, [teachers, searchTerm, filterDepartment, filterStatus, filterClassTeacher, sortColumn, sortDirection]);
+
+  useEffect(() => {
+    setSelectedItems(new Set());
+  }, [searchTerm, filterDepartment, filterStatus, filterClassTeacher, showTrashed, currentPage]);
+
+  const fetchTeachers = async () => {
     try {
-      await Promise.all([fetchTeachers(), fetchClasses()]);
+      setLoading(true);
+      const r = await api.get('/school/teachers', {
+        params: { only_trashed: showTrashed }
+      });
+      if (r.data.success) {
+        setTeachers(r.data.data);
+      }
     } catch {
-      toast.error('Failed to load data');
+      toast.error('Failed to load teachers');
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchTeachers = async () => {
-    const r = await api.get('/school/teachers');
-    if (r.data.success) setTeachers(r.data.data);
   };
 
   const fetchClasses = async () => {
@@ -220,7 +332,7 @@ const TeacherManager: React.FC = () => {
       department: item.department || '',
       salary: item.salary,
       is_class_teacher: item.is_class_teacher,
-      assigned_class_id: '',
+      assigned_class_id: item.assigned_class_id ? item.assigned_class_id.toString() : '',
       is_active: item.is_active,
     });
     setIsModalOpen(true);
@@ -265,26 +377,112 @@ const TeacherManager: React.FC = () => {
     if (!window.confirm(`Delete teacher "${name}"?`)) return;
     try {
       const r = await api.delete(`/school/teachers/${id}`);
-      if (r.data.success) { toast.success('Teacher deleted'); fetchTeachers(); }
+      if (r.data.success) { toast.success('Teacher deleted successfully'); fetchTeachers(); }
     } catch (err: any) { toast.error(err.response?.data?.message || 'Delete failed'); }
   };
 
   const handleToggleStatus = async (id: number) => {
     try {
       const r = await api.patch(`/school/teachers/${id}/toggle-status`);
-      if (r.data.success) { toast.success('Status updated'); fetchTeachers(); }
+      if (r.data.success) { toast.success('Status updated successfully'); fetchTeachers(); }
     } catch (err: any) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
-  const handleBulkStatusUpdate = async (status: boolean) => {
+  const handleRestore = async (id: number) => {
+    if (!confirm('Are you sure you want to restore this teacher?')) return;
+    try {
+      const response = await api.post(`/school/teachers/${id}/restore`);
+      if (response.data.success) {
+        toast.success('Teacher restored successfully');
+        fetchTeachers();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to restore teacher');
+    }
+  };
+
+  const handleForceDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to permanently delete this teacher? This action cannot be undone.')) return;
+    try {
+      const response = await api.delete(`/school/teachers/${id}/force`);
+      if (response.data.success) {
+        toast.success('Teacher permanently deleted');
+        fetchTeachers();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to permanently delete teacher');
+    }
+  };
+
+  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
     setBulkUpdating(true);
     const ids = Array.from(selectedItems);
     try {
-      for (const id of ids) await api.patch(`/school/teachers/${id}/toggle-status`);
-      toast.success(`${ids.length} teacher(s) ${status ? 'activated' : 'deactivated'}`);
-      setSelectedItems(new Set()); fetchTeachers();
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setBulkUpdating(false); }
+      const response = await api.post('/school/teachers/bulk-status', { status, ids });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setSelectedItems(new Set());
+        fetchTeachers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Operation failed');
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm('Are you sure you want to delete the selected teacher(s)?')) return;
+    setBulkUpdating(true);
+    const ids = Array.from(selectedItems);
+    try {
+      const response = await api.post('/school/teachers/bulk-delete', { ids });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setSelectedItems(new Set());
+        fetchTeachers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Operation failed');
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (!confirm('Are you sure you want to restore the selected teacher(s)?')) return;
+    setBulkUpdating(true);
+    const ids = Array.from(selectedItems);
+    try {
+      const response = await api.post('/school/teachers/bulk-restore', { ids });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setSelectedItems(new Set());
+        fetchTeachers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Operation failed');
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleBulkForceDelete = async () => {
+    if (!confirm('Are you sure you want to permanently delete the selected teacher(s)? This action cannot be undone.')) return;
+    setBulkUpdating(true);
+    const ids = Array.from(selectedItems);
+    try {
+      const response = await api.post('/school/teachers/bulk-delete', { ids, force: true });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setSelectedItems(new Set());
+        fetchTeachers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Operation failed');
+    } finally {
+      setBulkUpdating(false);
+    }
   };
 
   const handleExport = () => {
@@ -312,34 +510,162 @@ const TeacherManager: React.FC = () => {
     } catch { toast.error('Export failed'); }
   };
 
-  const downloadSampleFile = () => {
-    const sampleData = [{
-      'Employee ID': 'TCH001', 'First Name': 'Rahul', 'Last Name': 'Sharma',
-      'Email': 'rahul.sharma@school.com', 'Mobile': '9876543210', 'Gender': 'Male',
-      'Date of Birth': '1985-05-15', 'Address': 'Delhi, India',
-      'Qualification': 'M.Sc., B.Ed', 'Specialization': 'Mathematics',
-      'Experience (Years)': 10, 'Joining Date': '2015-04-01',
-      'Department': 'Mathematics', 'Salary': 50000, 'Class Teacher': 'Yes', 'Status': 'Active',
-    }];
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sample');
-    XLSX.writeFile(wb, 'sample_teachers.xlsx');
-    toast.success('Sample file downloaded!');
+  const downloadSampleFile = async () => {
+    try {
+      const classValues = classes.length > 0
+        ? classes.map(c => c.label)
+        : ['Class 1', 'Class 2'];
+      const genderValues = ['Male', 'Female', 'Other'];
+      const deptValues = DEPARTMENTS;
+      const classTeacherValues = ['Yes', 'No'];
+      const statusValues = ['Active', 'Inactive'];
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Teachers');
+
+      worksheet.columns = [
+        { header: 'Employee ID', key: 'employee_id', width: 15 },
+        { header: 'First Name', key: 'first_name', width: 18 },
+        { header: 'Last Name', key: 'last_name', width: 18 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Mobile', key: 'mobile', width: 15 },
+        { header: 'Gender', key: 'gender', width: 12 },
+        { header: 'Date of Birth', key: 'dob', width: 15 },
+        { header: 'Address', key: 'address', width: 30 },
+        { header: 'Qualification', key: 'qualification', width: 18 },
+        { header: 'Specialization', key: 'specialization', width: 20 },
+        { header: 'Experience (Years)', key: 'experience', width: 18 },
+        { header: 'Joining Date', key: 'joining_date', width: 15 },
+        { header: 'Department', key: 'department', width: 18 },
+        { header: 'Salary', key: 'salary', width: 12 },
+        { header: 'Class Teacher', key: 'class_teacher', width: 15 },
+        { header: 'Assign Class', key: 'assign_class', width: 15 },
+        { header: 'Status', key: 'status', width: 12 },
+      ];
+
+      // Add sample values
+      worksheet.getCell('A2').value = 'TCH001';
+      worksheet.getCell('B2').value = 'Rahul';
+      worksheet.getCell('C2').value = 'Sharma';
+      worksheet.getCell('D2').value = 'rahul.sharma@school.com';
+      worksheet.getCell('E2').value = '9876543210';
+      worksheet.getCell('F2').value = 'Male';
+      worksheet.getCell('G2').value = '1985-05-15';
+      worksheet.getCell('H2').value = 'Delhi, India';
+      worksheet.getCell('I2').value = 'M.Sc., B.Ed';
+      worksheet.getCell('J2').value = 'Mathematics';
+      worksheet.getCell('K2').value = 10;
+      worksheet.getCell('L2').value = '2015-04-01';
+      worksheet.getCell('M2').value = 'Mathematics';
+      worksheet.getCell('N2').value = 50000;
+      worksheet.getCell('O2').value = 'Yes';
+      worksheet.getCell('P2').value = classValues[0];
+      worksheet.getCell('Q2').value = 'Active';
+
+      // Write lists data to helper columns T, U, V, W, X
+      worksheet.getCell('T1').value = 'Gender_List';
+      worksheet.getCell('U1').value = 'Department_List';
+      worksheet.getCell('V1').value = 'Class_Teacher_List';
+      worksheet.getCell('W1').value = 'Class_List';
+      worksheet.getCell('X1').value = 'Status_List';
+
+      genderValues.forEach((val, idx) => { worksheet.getCell(`T${idx + 2}`).value = val; });
+      deptValues.forEach((val, idx) => { worksheet.getCell(`U${idx + 2}`).value = val; });
+      classTeacherValues.forEach((val, idx) => { worksheet.getCell(`V${idx + 2}`).value = val; });
+      classValues.forEach((val, idx) => { worksheet.getCell(`W${idx + 2}`).value = val; });
+      statusValues.forEach((val, idx) => { worksheet.getCell(`X${idx + 2}`).value = val; });
+
+      // Hide helper columns
+      worksheet.getColumn('T').hidden = true;
+      worksheet.getColumn('U').hidden = true;
+      worksheet.getColumn('V').hidden = true;
+      worksheet.getColumn('W').hidden = true;
+      worksheet.getColumn('X').hidden = true;
+
+      // Apply data validation to columns for rows 2 to 500
+      for (let r = 2; r <= 500; r++) {
+        worksheet.getCell(`F${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Teachers'!$T$2:$T$${1 + genderValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select from the dropdown list.',
+        };
+
+        worksheet.getCell(`M${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Teachers'!$U$2:$U$${1 + deptValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select from the dropdown list.',
+        };
+
+        worksheet.getCell(`O${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Teachers'!$V$2:$V$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Yes or No.',
+        };
+
+        worksheet.getCell(`P${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Teachers'!$W$2:$W$${1 + classValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select a class from the list.',
+        };
+
+        worksheet.getCell(`Q${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Teachers'!$X$2:$X$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Active or Inactive.',
+        };
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, 'sample_teachers.xlsx');
+      toast.success('Sample file downloaded!');
+    } catch (error) {
+      console.error('Error downloading sample file:', error);
+      toast.error('Failed to download sample file');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(ws);
-        setImportData(json); setImportPreview(json.slice(0, 5)); setIsImportModalOpen(true);
-      } catch { toast.error('Failed to read file'); }
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        // Filter out empty rows or helper columns rows by requiring First Name and Employee ID
+        const validRows = jsonData.filter((row: any) => row['First Name'] && row['Employee ID']);
+
+        if (validRows.length === 0) {
+          toast.error('No valid data found in the file. Make sure Employee ID and First Name are filled.');
+          return;
+        }
+
+        setImportData(validRows);
+        setImportPreview(validRows.slice(0, 5));
+        setIsImportModalOpen(true);
+      } catch (err) {
+        toast.error('Failed to read file');
+      }
     };
     reader.readAsArrayBuffer(file);
   };
@@ -347,32 +673,52 @@ const TeacherManager: React.FC = () => {
   const processImport = async () => {
     setImporting(true);
     let ok = 0, fail = 0;
+
     for (let i = 0; i < importData.length; i++) {
       const row = importData[i];
       try {
-        await api.post('/school/teachers', {
+        const classItem = classes.find(c => c.label === row['Assign Class']);
+
+        const payload = {
           user_data: {
-            first_name: row['First Name'], last_name: row['Last Name'] || '',
-            email: row['Email'], mobile: row['Mobile'],
+            first_name: row['First Name'],
+            last_name: row['Last Name'] || '',
+            email: row['Email'],
+            mobile: row['Mobile'] ? String(row['Mobile']) : '',
             gender: row['Gender']?.toLowerCase() || '',
-            date_of_birth: row['Date of Birth'] || null,
-            address: row['Address'] || '', user_type: 'teacher',
+            date_of_birth: row['Date of Birth'] ? new Date(row['Date of Birth']).toISOString().split('T')[0] : null,
+            address: row['Address'] || '',
+            user_type: 'teacher',
           },
           teacher_data: {
-            employee_id: row['Employee ID'], qualification: row['Qualification'] || '',
+            employee_id: String(row['Employee ID']),
+            qualification: row['Qualification'] || '',
             specialization: row['Specialization'] || '',
-            experience_years: row['Experience (Years)'] || 0,
-            joining_date: row['Joining Date'] || new Date().toISOString().split('T')[0],
-            department: row['Department'] || '', salary: row['Salary'] || 0,
+            experience_years: row['Experience (Years)'] !== undefined ? Number(row['Experience (Years)']) : 0,
+            joining_date: row['Joining Date'] ? new Date(row['Joining Date']).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            department: row['Department'] || '',
+            salary: row['Salary'] !== undefined ? Number(row['Salary']) : 0,
             is_class_teacher: row['Class Teacher']?.toLowerCase() === 'yes',
+            assigned_class_id: classItem ? classItem.value : null,
             is_active: row['Status']?.toLowerCase() === 'active',
           },
-        });
-        ok++;
-      } catch { fail++; }
+        };
+
+        const response = await api.post('/school/teachers', payload);
+        if (response.data.success) {
+          ok++;
+        } else {
+          fail++;
+        }
+      } catch (err) {
+        fail++;
+      }
     }
-    toast.success(`Import done: ${ok} success, ${fail} failed`);
-    setIsImportModalOpen(false); fetchTeachers(); setImporting(false);
+
+    toast.success(`Import complete: ${ok} success, ${fail} failed`);
+    setIsImportModalOpen(false);
+    fetchTeachers();
+    setImporting(false);
   };
 
   const handleSelectRow = (id: number) => {
@@ -389,11 +735,9 @@ const TeacherManager: React.FC = () => {
     );
   };
 
-  // ─── stats ───────────────────────────────────────────────
   const totalActive = teachers.filter(t => t.is_active).length;
   const totalClassTeachers = teachers.filter(t => t.is_class_teacher).length;
 
-  // ─── shared input classes ────────────────────────────────
   const inp = 'w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white';
   const lbl = 'block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide';
 
@@ -402,7 +746,7 @@ const TeacherManager: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent" />
-          <p className="mt-3 text-sm text-gray-500">Loading teachers…</p>
+          <p className="mt-3 text-sm text-gray-500">Loading staff data…</p>
         </div>
       </div>
     );
@@ -414,10 +758,9 @@ const TeacherManager: React.FC = () => {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Staff Management</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Manage staff profiles, qualifications &amp; class assignments</p>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Teacher Management</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Manage teacher profiles, qualifications &amp; class assignments</p>
           </div>
-          {/* stat pills */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-100">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
@@ -437,6 +780,7 @@ const TeacherManager: React.FC = () => {
           </div>
         </div>
       </div>
+
 
       {/* ── Toolbar ── */}
       <div className="bg-white border-b border-gray-200 px-6 py-3">
@@ -485,11 +829,9 @@ const TeacherManager: React.FC = () => {
             </button>
           )}
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Show select */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 border-r border-gray-200 pr-3 mr-1">
             <span className="text-[13px] text-gray-500 whitespace-nowrap">Rows:</span>
             <select value={itemsPerPage}
               onChange={e => { setItemsPerPage(e.target.value === 'all' ? -1 : Number(e.target.value)); setCurrentPage(1); }}
@@ -499,7 +841,19 @@ const TeacherManager: React.FC = () => {
             </select>
           </div>
 
-          {/* Action buttons */}
+          <div className="flex items-center gap-2 border-r border-gray-200 pr-3 mr-1">
+            <span className="text-xs font-semibold text-gray-600">Show Trashed</span>
+            <button
+              type="button"
+              onClick={() => setShowTrashed(prev => !prev)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${showTrashed ? 'bg-red-500' : 'bg-gray-200'}`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ${showTrashed ? 'translate-x-5' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             <button onClick={downloadSampleFile}
               className="px-3 py-2 text-[13px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
@@ -524,19 +878,47 @@ const TeacherManager: React.FC = () => {
         </div>
       </div>
 
+      {showTrashed && (
+        <div className="bg-red-50 border-b border-red-100 px-6 py-2.5 flex items-center gap-2 text-red-700 text-xs font-medium">
+          <svg className="w-4 h-4 text-red-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          <span>You are viewing deleted teachers. You can restore them or permanently delete them below.</span>
+        </div>
+      )}
+
       {/* ── Bulk Action Bar ── */}
       {selectedItems.size > 0 && (
         <div className="bg-blue-600 px-6 py-2.5 flex items-center justify-between gap-4">
           <span className="text-sm text-white font-medium">{selectedItems.size} teacher(s) selected</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => handleBulkStatusUpdate(true)} disabled={bulkUpdating}
-              className="px-3 py-1.5 bg-white text-green-700 text-[13px] rounded-lg font-medium hover:bg-green-50 disabled:opacity-50 transition">
-              ✓ Activate
-            </button>
-            <button onClick={() => handleBulkStatusUpdate(false)} disabled={bulkUpdating}
-              className="px-3 py-1.5 bg-white text-red-700 text-[13px] rounded-lg font-medium hover:bg-red-50 disabled:opacity-50 transition">
-              ✕ Deactivate
-            </button>
+            {!showTrashed ? (
+              <>
+                <button onClick={() => handleBulkStatusChange('active')} disabled={bulkUpdating}
+                  className="px-3 py-1.5 bg-white text-green-700 text-[13px] rounded-lg font-medium hover:bg-green-50 disabled:opacity-50 transition">
+                  ✓ Activate
+                </button>
+                <button onClick={() => handleBulkStatusChange('inactive')} disabled={bulkUpdating}
+                  className="px-3 py-1.5 bg-white text-red-700 text-[13px] rounded-lg font-medium hover:bg-red-50 disabled:opacity-50 transition">
+                  ✕ Deactivate
+                </button>
+                <button onClick={handleBulkDelete} disabled={bulkUpdating}
+                  className="px-3 py-1.5 bg-red-700 text-white text-[13px] rounded-lg font-medium hover:bg-red-800 disabled:opacity-50 transition border border-red-800">
+                  ✕ Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleBulkRestore} disabled={bulkUpdating}
+                  className="px-3 py-1.5 bg-white text-blue-700 text-[13px] rounded-lg font-medium hover:bg-blue-50 disabled:opacity-50 transition">
+                  ↺ Restore
+                </button>
+                <button onClick={handleBulkForceDelete} disabled={bulkUpdating}
+                  className="px-3 py-1.5 bg-red-700 text-white text-[13px] rounded-lg font-medium hover:bg-red-800 disabled:opacity-50 transition border border-red-800">
+                  ✕ Delete Permanently
+                </button>
+              </>
+            )}
             <button onClick={() => setSelectedItems(new Set())}
               className="px-3 py-1.5 bg-blue-500 text-white text-[13px] rounded-lg hover:bg-blue-400 transition">
               Clear
@@ -589,7 +971,7 @@ const TeacherManager: React.FC = () => {
                       </svg>
                     </div>
                     <p className="text-gray-500 text-sm">{hasFilters ? 'No teachers match your filters.' : 'No teachers added yet.'}</p>
-                    {!hasFilters && (
+                    {!hasFilters && !showTrashed && (
                       <button onClick={openAddModal} className="text-blue-600 text-sm font-medium hover:underline">
                         Add your first teacher →
                       </button>
@@ -645,16 +1027,22 @@ const TeacherManager: React.FC = () => {
                       <span className="text-[12px] text-gray-400">yrs</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3">
                     {item.is_class_teacher
-                      ? <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium bg-green-100 text-green-800 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Yes
+                      ? <span className="inline-flex flex-col gap-0.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium bg-green-100 text-green-800 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Yes
+                        </span>
+                        {item.assigned_class_name && (
+                          <span className="text-[11px] text-gray-500 text-center font-semibold">({item.assigned_class_name})</span>
+                        )}
                       </span>
                       : <span className="text-[12px] text-gray-400">—</span>
                     }
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => handleToggleStatus(item.id)}
+                    <button onClick={() => !showTrashed && handleToggleStatus(item.id)}
+                      disabled={showTrashed}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full text-[12px] font-medium transition-colors border
                         ${item.is_active
                           ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
@@ -665,20 +1053,41 @@ const TeacherManager: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEditModal(item)} title="Edit"
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDelete(item.id, getFullName(item))} title="Delete"
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {!showTrashed ? (
+                        <>
+                          <button onClick={() => openEditModal(item)} title="Edit"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                          <button onClick={() => handleDelete(item.id, getFullName(item))} title="Delete"
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => handleRestore(item.id)} title="Restore"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.75 8H17" />
+                            </svg>
+                          </button>
+                          <button onClick={() => handleForceDelete(item.id)} title="Delete Permanently"
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -881,11 +1290,12 @@ const TeacherManager: React.FC = () => {
                   {formData.is_class_teacher && (
                     <div className="ml-7">
                       <label className={lbl}>Assign Class</label>
-                      <select name="assigned_class_id" value={formData.assigned_class_id}
-                        onChange={handleInputChange} className={inp}>
-                        <option value="">Select class</option>
-                        {classes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                      </select>
+                      <SearchableSelect
+                        options={classes}
+                        value={formData.assigned_class_id}
+                        onChange={(val) => setFormData(prev => ({ ...prev, assigned_class_id: val }))}
+                        placeholder="Select class"
+                      />
                     </div>
                   )}
                   <label className="flex items-start gap-3 cursor-pointer">
