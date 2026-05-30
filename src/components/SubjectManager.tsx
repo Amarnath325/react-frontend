@@ -3,6 +3,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import Select from 'react-select';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 interface SubjectData {
   id: number;
   school_id: number;
@@ -111,6 +113,7 @@ interface SearchableSelectProps {
   placeholder: string;
   isClearable?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -726,35 +729,131 @@ const SubjectManager: React.FC = () => {
     }
   };
 
-  const downloadSampleFile = () => {
-    const sampleData = [
-      {
-        'Class': 'Class 1',
-        'Subject Name': 'Mathematics',
-        'Subject Code': 'MATH101',
-        'Subject Type': 'Theory',
-        'Max Marks': 100,
-        'Passing Marks': 33,
-        'Elective': 'No',
-        'Status': 'Active',
-      },
-      {
-        'Class': 'Class 1',
-        'Subject Name': 'Science',
-        'Subject Code': 'SCI101',
-        'Subject Type': 'Theory + Practical',
-        'Max Marks': 100,
-        'Passing Marks': 33,
-        'Elective': 'No',
-        'Status': 'Active',
-      },
-    ];
+  const downloadSampleFile = async () => {
+    try {
+      const classValues = classes.length > 0
+        ? classes.map(c => c.label)
+        : ['Class 1', 'Class 2'];
+      const subjectTypeValues = subjectTypeOptions.length > 0
+        ? subjectTypeOptions.map(t => t.label)
+        : ['Theory', 'Practical', 'Theory + Practical'];
+      const electiveValues = ['Yes', 'No'];
+      const statusValues = ['Active', 'Inactive'];
 
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sample');
-    XLSX.writeFile(wb, 'sample_subjects.xlsx');
-    toast.success('Sample file downloaded!');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Subjects');
+
+      // Set column headers and widths
+      worksheet.columns = [
+        { header: 'Class', key: 'Class', width: 15 },
+        { header: 'Subject Name', key: 'Subject Name', width: 25 },
+        { header: 'Subject Code', key: 'Subject Code', width: 15 },
+        { header: 'Subject Type', key: 'Subject Type', width: 20 },
+        { header: 'Theory Max Marks', key: 'Theory Max Marks', width: 18 },
+        { header: 'Theory Passing Marks', key: 'Theory Passing Marks', width: 20 },
+        { header: 'Practical Max Marks', key: 'Practical Max Marks', width: 18 },
+        { header: 'Practical Passing Marks', key: 'Practical Passing Marks', width: 20 },
+        { header: 'Max Marks', key: 'Max Marks', width: 12 },
+        { header: 'Passing Marks', key: 'Passing Marks', width: 15 },
+        { header: 'Elective', key: 'Elective', width: 12 },
+        { header: 'Status', key: 'Status', width: 12 },
+      ];
+
+      // Add a sample row for every class to make it dynamic and complete
+      classValues.forEach((className, idx) => {
+        const r = idx + 2;
+        worksheet.getCell(`A${r}`).value = className;
+        worksheet.getCell(`B${r}`).value = 'Mathematics';
+        worksheet.getCell(`C${r}`).value = `${className.replace(/\s+/g, '').toUpperCase()}101`;
+        worksheet.getCell(`D${r}`).value = subjectTypeValues[0];
+        worksheet.getCell(`E${r}`).value = 70;
+        worksheet.getCell(`F${r}`).value = 23;
+        worksheet.getCell(`G${r}`).value = 30;
+        worksheet.getCell(`H${r}`).value = 10;
+        worksheet.getCell(`K${r}`).value = 'No';
+        worksheet.getCell(`L${r}`).value = 'Active';
+      });
+
+      // Write lists data to helper columns P, Q, R, S
+      worksheet.getCell('P1').value = 'Class_List';
+      worksheet.getCell('Q1').value = 'Subject_Type_List';
+      worksheet.getCell('R1').value = 'Elective_List';
+      worksheet.getCell('S1').value = 'Status_List';
+
+      classValues.forEach((val, idx) => {
+        worksheet.getCell(`P${idx + 2}`).value = val;
+      });
+      subjectTypeValues.forEach((val, idx) => {
+        worksheet.getCell(`Q${idx + 2}`).value = val;
+      });
+      electiveValues.forEach((val, idx) => {
+        worksheet.getCell(`R${idx + 2}`).value = val;
+      });
+      statusValues.forEach((val, idx) => {
+        worksheet.getCell(`S${idx + 2}`).value = val;
+      });
+
+      // Hide helper columns P to S
+      worksheet.getColumn('P').hidden = true;
+      worksheet.getColumn('Q').hidden = true;
+      worksheet.getColumn('R').hidden = true;
+      worksheet.getColumn('S').hidden = true;
+
+      // Apply data validation and formulas to columns for rows 2 to 500
+      for (let r = 2; r <= 500; r++) {
+        // Set formulas for Max Marks and Passing Marks
+        worksheet.getCell(`I${r}`).value = { formula: `IF(AND(ISBLANK(E${r}),ISBLANK(G${r})),"",SUM(E${r},G${r}))` };
+        worksheet.getCell(`J${r}`).value = { formula: `IF(AND(ISBLANK(F${r}),ISBLANK(H${r})),"",SUM(F${r},H${r}))` };
+
+        // Class validation (Col A)
+        worksheet.getCell(`A${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Subjects'!$P$2:$P$${1 + classValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        // Subject Type validation (Col D)
+        worksheet.getCell(`D${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Subjects'!$Q$2:$Q$${1 + subjectTypeValues.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select an item from the dropdown list.',
+        };
+
+        // Elective validation (Col K)
+        worksheet.getCell(`K${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Subjects'!$R$2:$R$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Yes or No.',
+        };
+
+        // Status validation (Col L)
+        worksheet.getCell(`L${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`'Subjects'!$S$2:$S$3`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Selection',
+          error: 'Please select Active or Inactive.',
+        };
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, 'sample_subjects.xlsx');
+      toast.success('Sample file downloaded!');
+    } catch (error) {
+      console.error('Error downloading sample file:', error);
+      toast.error('Failed to download sample file');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -767,10 +866,18 @@ const SubjectManager: React.FC = () => {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-        setImportData(jsonData);
-        setImportPreview(jsonData.slice(0, 5));
+        // Filter out empty rows or helper columns rows by requiring Class and Subject Name
+        const validRows = jsonData.filter((row: any) => row['Class'] && row['Subject Name']);
+
+        if (validRows.length === 0) {
+          toast.error('No valid data found in the file. Make sure Class and Subject Name are filled.');
+          return;
+        }
+
+        setImportData(validRows);
+        setImportPreview(validRows.slice(0, 5));
         setIsImportModalOpen(true);
       } catch {
         toast.error('Failed to read file');
@@ -802,8 +909,12 @@ const SubjectManager: React.FC = () => {
           name: row['Subject Name'],
           code: row['Subject Code'] || null,
           subject_type: matchedType ? matchedType.value : null,
-          max_marks: Number(row['Max Marks']) || 100,
-          passing_marks: Number(row['Passing Marks']) || 33,
+          max_marks: Number(row['Max Marks']) || (Number(row['Theory Max Marks']) || 0) + (Number(row['Practical Max Marks']) || 0) || 100,
+          passing_marks: Number(row['Passing Marks']) || (Number(row['Theory Passing Marks']) || 0) + (Number(row['Practical Passing Marks']) || 0) || 33,
+          theory_max_marks: row['Theory Max Marks'] !== undefined && row['Theory Max Marks'] !== '' ? Number(row['Theory Max Marks']) : null,
+          theory_passing_marks: row['Theory Passing Marks'] !== undefined && row['Theory Passing Marks'] !== '' ? Number(row['Theory Passing Marks']) : null,
+          practical_max_marks: row['Practical Max Marks'] !== undefined && row['Practical Max Marks'] !== '' ? Number(row['Practical Max Marks']) : null,
+          practical_passing_marks: row['Practical Passing Marks'] !== undefined && row['Practical Passing Marks'] !== '' ? Number(row['Practical Passing Marks']) : null,
           is_elective: row['Elective']?.toLowerCase() === 'yes',
           is_active: row['Status']?.toLowerCase() === 'active',
         };
