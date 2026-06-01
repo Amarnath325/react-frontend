@@ -5,6 +5,7 @@ import api from '../services/api';
 import AcademicYearManager from '../components/AcademicYearManager';
 import FeeStructureManager from '../components/FeeStructureManager';
 import ExaminationManager from '../components/ExaminationManager';
+import DepartmentManager from '../components/DepartmentManager';
 
 interface SchoolProfile {
   // Basic Information
@@ -278,6 +279,7 @@ const SchoolSettings: React.FC = () => {
     { id: 'academic', title: 'Academic Years', icon: '📅', description: 'Manage academic sessions', color: 'bg-[#4e74b1]' },
     { id: 'fee', title: 'Fee Structure', icon: '💰', description: 'Manage fee categories', color: 'bg-[#b4a67a]' },
     { id: 'exam', title: 'Examination System', icon: '📝', description: 'Manage exam settings', color: 'bg-[#9889a5]' },
+    { id: 'department', title: 'Departments', icon: '🏢', description: 'Manage school departments', color: 'bg-[#4ca1af]' },
   ];
 
   const profileTabs = [
@@ -647,6 +649,26 @@ const SchoolSettings: React.FC = () => {
           </div>
           <div className="p-6 overflow-visible min-h-[430px]">
             <ExaminationManager />
+          </div>
+        </div>
+      )}
+
+      {/* ========== DEPARTMENTS SECTION ========== */}
+      {activeCard === 'department' && (
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-2 bg-gradient-to-r from-[#4ca1af] to-[#2c3e50] text-white flex justify-between items-center">
+            <div>
+              <h2 className="text-[16px] font-bold">Departments</h2>
+              <p className="text-blue-100 text-[14px]">Manage school departments</p>
+            </div>
+            <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-6 overflow-visible min-h-[430px]">
+            <DepartmentManager />
           </div>
         </div>
       )}
