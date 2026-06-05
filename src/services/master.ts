@@ -5,6 +5,17 @@ export interface MasterOption {
   label: string;
 }
 
+export interface RegistrationOptions {
+  school_types: MasterOption[];
+  management_types: MasterOption[];
+  affiliation_boards: MasterOption[];
+  affiliation_statuses: MasterOption[];
+  classes: MasterOption[];
+  streams: MasterOption[];
+  mediums: MasterOption[];
+  subscription_plans: MasterOption[];
+}
+
 // Helper function to convert API response to MasterOption array
 // Backend returns {m_id: m_name} format where m_id is stored and m_name is displayed
 const convertToOptions = (data: any): MasterOption[] => {
@@ -165,6 +176,27 @@ export const masterService = {
     } catch (error) {
       console.error('Error fetching subject types:', error);
       return [];
+    }
+  },
+
+  getRegistrationOptions: async (): Promise<RegistrationOptions | null> => {
+    try {
+      const response = await api.get('/master/registration-options');
+      const data = response.data?.data;
+      if (!data) return null;
+      return {
+        school_types: convertToOptions(data.school_types),
+        management_types: convertToOptions(data.management_types),
+        affiliation_boards: convertToOptions(data.affiliation_boards),
+        affiliation_statuses: convertToOptions(data.affiliation_statuses),
+        classes: convertToOptions(data.classes),
+        streams: convertToOptions(data.streams),
+        mediums: convertToOptions(data.mediums),
+        subscription_plans: convertToOptions(data.subscription_plans),
+      };
+    } catch (error) {
+      console.error('Error fetching registration options:', error);
+      return null;
     }
   },
 };

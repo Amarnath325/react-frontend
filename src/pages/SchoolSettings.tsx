@@ -67,10 +67,16 @@ interface MasterData {
 
 const SchoolSettings: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [activeProfileTab, setActiveProfileTab] = useState('general');
   const [saving, setSaving] = useState(false);
+  
+  // School Profile Loading States
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileFetched, setProfileFetched] = useState(false);
+  const [masterDataFetched, setMasterDataFetched] = useState(false);
+  const [openedCards, setOpenedCards] = useState<string[]>([]);
   
   // School Profile State
   const [profile, setProfile] = useState<SchoolProfile>({
@@ -118,22 +124,24 @@ const SchoolSettings: React.FC = () => {
     languages: [],
   });
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async () => {
-    setLoading(true);
+  const loadProfileAndMasterData = async () => {
+    if (profileFetched && masterDataFetched) return;
+    
+    setProfileLoading(true);
     try {
-      await Promise.all([
-        fetchSchoolProfile(),
-        fetchMasterData(),
-      ]);
+      const promises = [];
+      if (!profileFetched) {
+        promises.push(fetchSchoolProfile());
+      }
+      if (!masterDataFetched) {
+        promises.push(fetchMasterData());
+      }
+      await Promise.all(promises);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+      console.error('Error loading profile data:', error);
+      toast.error('Failed to load profile data');
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
 
@@ -142,9 +150,11 @@ const SchoolSettings: React.FC = () => {
       const response = await api.get('/school/settings');
       if (response.data.success) {
         setProfile(response.data.data);
+        setProfileFetched(true);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      throw error;
     }
   };
 
@@ -197,8 +207,24 @@ const SchoolSettings: React.FC = () => {
         timezones: timezones,
         languages: languages,
       });
+      setMasterDataFetched(true);
     } catch (error) {
       console.error('Error fetching master data:', error);
+      throw error;
+    }
+  };
+
+  const handleCardClick = (cardId: string) => {
+    const isClosing = activeCard === cardId;
+    setActiveCard(isClosing ? null : cardId);
+    
+    if (!isClosing) {
+      if (!openedCards.includes(cardId)) {
+        setOpenedCards(prev => [...prev, cardId]);
+      }
+      if (cardId === 'profile') {
+        loadProfileAndMasterData();
+      }
     }
   };
 
@@ -315,39 +341,32 @@ const SchoolSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#6e799a] to-[#7874af] rounded-2xl p-6 text-white">
-        <h1 className="text-[20px] font-bold">School Settings</h1>
-        <p className="text-blue-100 text-[16px]">Manage your school configuration from one place</p>
-      </div>
-
       {/* Cards Grid - Ultra Compact */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
         {cards.map((card) => (
           <button
             key={card.id}
-            onClick={() => setActiveCard(activeCard === card.id ? null : card.id)}
-            className={`bg-white rounded-lg shadow-sm p-2 sm:p-3 text-center transition-all hover:shadow-md cursor-pointer ${
-              activeCard === card.id ? 'ring-2 ring-blue-500' : ''
+            onClick={() => handleCardClick(card.id)}
+            className={`bg-white rounded-xl shadow-sm p-2 sm:p-2.5 text-center transition-all duration-200 hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-98 ${
+              activeCard === card.id ? 'ring-2 ring-blue-500 bg-blue-50/10' : ''
             }`}
           >
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 ${card.color} rounded-lg flex items-center justify-center text-lg sm:text-xl mx-auto mb-1 sm:mb-2`}>
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 ${card.color} rounded-lg flex items-center justify-center text-sm sm:text-base mx-auto mb-1`}>
               {card.icon}
             </div>
-            <h3 className="text-xs sm:text-sm font-semibold text-gray-800">{card.title}</h3>
-            <p className="text-gray-500 text-xs mt-0.5 hidden sm:block">{card.description}</p>
+            <h3 className="text-[11px] sm:text-xs font-bold text-gray-800">{card.title}</h3>
+            <p className="text-gray-500 text-[9px] sm:text-[10px] mt-0.5 hidden sm:block leading-tight">{card.description}</p>
           </button>
         ))}
       </div>
 
       {/* ========== SCHOOL PROFILE SECTION (With Tabs) ========== */}
-      {activeCard === 'profile' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      {openedCards.includes('profile') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'profile' ? '' : 'hidden'}`}>
           {/* Header with Close Button */}
           <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-[#558fed] to-[#87a1d9] text-white">
             <div>
               <h2 className="text-[14px] font-semibold">School Profile</h2>
-              <p className="text-blue-100 text-[12px]">Edit your school information</p>
             </div>
             <button 
               onClick={() => setActiveCard(null)}
@@ -359,7 +378,16 @@ const SchoolSettings: React.FC = () => {
             </button>
           </div>
 
-          {/* Profile Tabs */}
+          {profileLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-blue-600 border-t-transparent"></div>
+                <p className="mt-2 text-xs text-gray-500">Loading profile...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Profile Tabs */}
           <div className="flex border-b border-gray-200 overflow-x-auto px-4">
             {profileTabs.map((tab) => (
               <button
@@ -378,62 +406,62 @@ const SchoolSettings: React.FC = () => {
             ))}
           </div>
 
-          <div className="p-4">
+          <div className="p-3">
             {/* General Tab */}
             {activeProfileTab === 'general' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3.5 gap-y-2">
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">School Name *</label>
-                  <input type="text" name="business_name" value={profile.business_name} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">School Name *</label>
+                  <input type="text" name="business_name" value={profile.business_name} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">School Code *</label>
-                  <input type="text" name="school_code" value={profile.school_code} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">School Code *</label>
+                  <input type="text" name="school_code" value={profile.school_code} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Registration Number</label>
-                  <input type="text" name="registration_number" value={profile.registration_number} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Registration Number</label>
+                  <input type="text" name="registration_number" value={profile.registration_number} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Tax Number (GST/PAN)</label>
-                  <input type="text" name="tax_number" value={profile.tax_number} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Tax Number (GST/PAN)</label>
+                  <input type="text" name="tax_number" value={profile.tax_number} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" name="email" value={profile.email} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg bg-gray-50" disabled />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Email</label>
+                  <input type="email" name="email" value={profile.email} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg bg-gray-50 h-7.5 outline-none" disabled />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input type="tel" name="phone" value={profile.phone} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Phone Number</label>
+                  <input type="tel" name="phone" value={profile.phone} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Mobile Number</label>
-                  <input type="tel" name="mobile" value={profile.mobile} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Mobile Number</label>
+                  <input type="tel" name="mobile" value={profile.mobile} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Website</label>
-                  <input type="url" name="website" value={profile.website} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="https://www.school.com" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Website</label>
+                  <input type="url" name="website" value={profile.website} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="https://www.school.com" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Established Year</label>
-                  <input type="text" name="established_year" value={profile.established_year} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="2024" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Established Year</label>
+                  <input type="text" name="established_year" value={profile.established_year} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="2024" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Affiliation Board</label>
-                  <select name="affiliation_board" value={profile.affiliation_board} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Affiliation Board</label>
+                  <select name="affiliation_board" value={profile.affiliation_board} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     <option value="">Select Board</option>
                     {renderSelectOptions(masterData.affiliationBoards, 'No boards available')}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">School Type</label>
-                  <select name="school_type" value={profile.school_type} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">School Type</label>
+                  <select name="school_type" value={profile.school_type} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     {renderSelectOptions(masterData.schoolTypes, 'Select school type')}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Gender Type</label>
-                  <select name="gender_type" value={profile.gender_type} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Gender Type</label>
+                  <select name="gender_type" value={profile.gender_type} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     {renderSelectOptions(masterData.genders, 'Select gender type')}
                   </select>
                 </div>
@@ -442,161 +470,162 @@ const SchoolSettings: React.FC = () => {
 
             {/* Address Tab */}
             {activeProfileTab === 'address' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="md:col-span-2">
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Address</label>
-                  <textarea name="address" value={profile.address} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3.5 gap-y-2">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Address</label>
+                  <textarea name="address" value={profile.address} onChange={handleProfileChange} rows={1} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">City</label>
-                  <input type="text" name="city" value={profile.city} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">City</label>
+                  <input type="text" name="city" value={profile.city} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">State</label>
-                  <input type="text" name="state" value={profile.state} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">State</label>
+                  <input type="text" name="state" value={profile.state} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Country</label>
-                  <input type="text" name="country" value={profile.country} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg bg-gray-50" readOnly />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Country</label>
+                  <input type="text" name="country" value={profile.country} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg bg-gray-50 h-7.5 outline-none" readOnly />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Pincode</label>
-                  <input type="text" name="pincode" value={profile.pincode} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Pincode</label>
+                  <input type="text" name="pincode" value={profile.pincode} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" />
                 </div>
               </div>
             )}
 
             {/* Communication Tab */}
             {activeProfileTab === 'communication' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <div>
-                    <span className="text-[12px] font-medium">SMS Notifications</span>
-                    <p className="text-[11px] text-gray-500">Send SMS alerts</p>
+                    <span className="text-[11px] font-bold text-gray-700">SMS Alerts</span>
+                    <p className="text-[9px] text-gray-400">Enable SMS notifications</p>
                   </div>
-                  <input type="checkbox" name="sms_enabled" checked={profile.sms_enabled} onChange={handleProfileChange} className="w-4 h-4 text-blue-600" />
+                  <input type="checkbox" name="sms_enabled" checked={profile.sms_enabled} onChange={handleProfileChange} className="w-3.5 h-3.5 text-blue-600 rounded" />
                 </label>
-                <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <div>
-                    <span className="text-[12px] font-medium">Email Notifications</span>
-                    <p className="text-[11px] text-gray-500">Send email alerts</p>
+                    <span className="text-[11px] font-bold text-gray-700">Email Alerts</span>
+                    <p className="text-[9px] text-gray-400">Enable email notifications</p>
                   </div>
-                  <input type="checkbox" name="email_enabled" checked={profile.email_enabled} onChange={handleProfileChange} className="w-4 h-4 text-blue-600" />
+                  <input type="checkbox" name="email_enabled" checked={profile.email_enabled} onChange={handleProfileChange} className="w-3.5 h-3.5 text-blue-600 rounded" />
                 </label>
-                <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <div>
-                    <span className="text-[12px] font-medium">Notice Board</span>
-                    <p className="text-[11px] text-gray-500">Enable notice board</p>
+                    <span className="text-[11px] font-bold text-gray-700">Notice Board</span>
+                    <p className="text-[9px] text-gray-400">Enable notice boards</p>
                   </div>
-                  <input type="checkbox" name="notice_board_enabled" checked={profile.notice_board_enabled} onChange={handleProfileChange} className="w-4 h-4 text-blue-600" />
+                  <input type="checkbox" name="notice_board_enabled" checked={profile.notice_board_enabled} onChange={handleProfileChange} className="w-3.5 h-3.5 text-blue-600 rounded" />
                 </label>
-                <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <div>
-                    <span className="text-[12px] font-medium">Parent Portal</span>
-                    <p className="text-[11px] text-gray-500">Allow parents access</p>
+                    <span className="text-[11px] font-bold text-gray-700">Parent Portal</span>
+                    <p className="text-[9px] text-gray-400">Enable parent access</p>
                   </div>
-                  <input type="checkbox" name="parent_portal_enabled" checked={profile.parent_portal_enabled} onChange={handleProfileChange} className="w-4 h-4 text-blue-600" />
+                  <input type="checkbox" name="parent_portal_enabled" checked={profile.parent_portal_enabled} onChange={handleProfileChange} className="w-3.5 h-3.5 text-blue-600 rounded" />
                 </label>
               </div>
             )}
 
             {/* Security Tab */}
             {activeProfileTab === 'security' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3.5 gap-y-2">
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Timezone</label>
-                  <select name="timezone" value={profile.timezone} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Timezone</label>
+                  <select name="timezone" value={profile.timezone} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     {renderSelectOptions(masterData.timezones, 'Select timezone')}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Date Format</label>
-                  <select name="date_format" value={profile.date_format} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date Format</label>
+                  <select name="date_format" value={profile.date_format} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                     <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                     <option value="YYYY/MM/DD">YYYY/MM/DD</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Language</label>
-                  <select name="language" value={profile.language} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Language</label>
+                  <select name="language" value={profile.language} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition">
                     {renderSelectOptions(masterData.languages, 'Select language')}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Password Expiry (Days)</label>
-                  <input type="number" name="password_expiry_days" value={profile.password_expiry_days} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" min="30" max="365" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Password Expiry (Days)</label>
+                  <input type="number" name="password_expiry_days" value={profile.password_expiry_days} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" min="30" max="365" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Max Login Attempts</label>
-                  <input type="number" name="max_login_attempts" value={profile.max_login_attempts} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" min="3" max="10" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Max Login Attempts</label>
+                  <input type="number" name="max_login_attempts" value={profile.max_login_attempts} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" min="3" max="10" />
                 </div>
-                <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 md:col-span-2">
+                <label className="flex items-center justify-between p-1.5 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <div>
-                    <span className="text-[12px] font-medium">Two-Factor Authentication</span>
-                    <p className="text-[11px] text-gray-500">Enable 2FA for admin accounts</p>
+                    <span className="text-[11px] font-bold text-gray-700">Two-Factor Auth</span>
+                    <p className="text-[9px] text-gray-400">Enable 2FA security</p>
                   </div>
-                  <input type="checkbox" name="two_factor_auth" checked={profile.two_factor_auth} onChange={handleProfileChange} className="w-4 h-4 text-blue-600" />
+                  <input type="checkbox" name="two_factor_auth" checked={profile.two_factor_auth} onChange={handleProfileChange} className="w-3.5 h-3.5 text-blue-600 rounded" />
                 </label>
               </div>
             )}
 
             {/* Social Media Tab */}
             {activeProfileTab === 'social' && (
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3.5 gap-y-2">
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Facebook URL</label>
-                  <input type="url" name="facebook_url" value={profile.facebook_url} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="https://facebook.com/school" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Facebook URL</label>
+                  <input type="url" name="facebook_url" value={profile.facebook_url} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="https://facebook.com/school" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Twitter URL</label>
-                  <input type="url" name="twitter_url" value={profile.twitter_url} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="https://twitter.com/school" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Twitter URL</label>
+                  <input type="url" name="twitter_url" value={profile.twitter_url} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="https://twitter.com/school" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">LinkedIn URL</label>
-                  <input type="url" name="linkedin_url" value={profile.linkedin_url} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="https://linkedin.com/school" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">LinkedIn URL</label>
+                  <input type="url" name="linkedin_url" value={profile.linkedin_url} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="https://linkedin.com/school" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Instagram URL</label>
-                  <input type="url" name="instagram_url" value={profile.instagram_url} onChange={handleProfileChange} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="https://instagram.com/school" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Instagram URL</label>
+                  <input type="url" name="instagram_url" value={profile.instagram_url} onChange={handleProfileChange} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white h-7.5 outline-none transition" placeholder="https://instagram.com/school" />
                 </div>
               </div>
             )}
 
             {/* About Tab */}
             {activeProfileTab === 'about' && (
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3.5 gap-y-2">
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">About School</label>
-                  <textarea name="about_school" value={profile.about_school} onChange={handleProfileChange} rows={3} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="Write about your school's history, achievements, etc." />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">About School</label>
+                  <textarea name="about_school" value={profile.about_school} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white outline-none transition" placeholder="School's history, achievements, etc." />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Mission</label>
-                  <textarea name="mission" value={profile.mission} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="School's mission statement" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Mission</label>
+                  <textarea name="mission" value={profile.mission} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white outline-none transition" placeholder="School's mission statement" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-gray-700 mb-1">Vision</label>
-                  <textarea name="vision" value={profile.vision} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1.5 text-[12px] border rounded-lg" placeholder="School's vision statement" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Vision</label>
+                  <textarea name="vision" value={profile.vision} onChange={handleProfileChange} rows={2} className="w-full px-2 py-1 text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white outline-none transition" placeholder="School's vision statement" />
                 </div>
               </div>
             )}
 
             {/* Save Button */}
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-              <button onClick={() => setActiveCard(null)} className="px-3 py-1.5 text-[12px] border rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-              <button onClick={saveProfile} disabled={saving} className="px-4 py-1.5 text-[12px] bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Saving...' : 'Save Profile'}</button>
+            <div className="flex justify-end gap-2 mt-3 pt-2.5 border-t">
+              <button onClick={() => setActiveCard(null)} className="px-3 py-1 text-[11.5px] border rounded-lg text-gray-700 hover:bg-gray-50 transition active:scale-95">Cancel</button>
+              <button onClick={saveProfile} disabled={saving} className="px-4 py-1 text-[11.5px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition active:scale-95">{saving ? 'Saving...' : 'Save Profile'}</button>
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
 
       {/* ========== ACADEMIC YEARS SECTION ========== */}
-      {activeCard === 'academic' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      {openedCards.includes('academic') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'academic' ? '' : 'hidden'}`}>
           <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-[#4e74b1] to-[#93a6d0] text-white">
             <div>
               <h2 className="text-[14px] font-semibold">Academic Years</h2>
-              <p className="text-green-100 text-[12px]">Manage academic sessions</p>
             </div>
             <button 
               onClick={() => setActiveCard(null)}
@@ -607,19 +636,18 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-4 overflow-visible">
+          <div className="p-3 overflow-visible">
             <AcademicYearManager onClose={() => setActiveCard(null)} />
           </div>
         </div>
       )}
 
       {/* ========== FEE STRUCTURE SECTION ========== */}
-      {activeCard === 'fee' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-2 bg-gradient-to-r from-[#b4a67a] to-[#b7a275] text-white flex justify-between items-center">
+      {openedCards.includes('fee') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'fee' ? '' : 'hidden'}`}>
+          <div className="px-4 py-3 bg-gradient-to-r from-[#b4a67a] to-[#b7a275] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-[16px] font-bold">Fee Structure</h2>
-              <p className="text-yellow-100 text-[14px]">Manage fee categories and amounts</p>
+              <h2 className="text-[14px] font-semibold">Fee Structure</h2>
             </div>
             <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -627,19 +655,18 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6 overflow-visible min-h-[430px]">
+          <div className="p-3 overflow-visible">
             <FeeStructureManager />
           </div>
         </div>
       )}
 
       {/* ========== EXAMINATION SYSTEM SECTION ========== */}
-      {activeCard === 'exam' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-2 bg-gradient-to-r from-[#9889a5] to-[#ae8ace] text-white flex justify-between items-center">
+      {openedCards.includes('exam') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'exam' ? '' : 'hidden'}`}>
+          <div className="px-4 py-3 bg-gradient-to-r from-[#9889a5] to-[#ae8ace] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-[16px] font-bold">Examination System</h2>
-              <p className="text-purple-100 text-[14px]">Manage exam types and settings</p>
+              <h2 className="text-[14px] font-semibold">Examination System</h2>
             </div>
             <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -647,19 +674,18 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6 overflow-visible min-h-[430px]">
+          <div className="p-3 overflow-visible">
             <ExaminationManager />
           </div>
         </div>
       )}
 
       {/* ========== DEPARTMENTS SECTION ========== */}
-      {activeCard === 'department' && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-2 bg-gradient-to-r from-[#4ca1af] to-[#2c3e50] text-white flex justify-between items-center">
+      {openedCards.includes('department') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'department' ? '' : 'hidden'}`}>
+          <div className="px-4 py-3 bg-gradient-to-r from-[#4ca1af] to-[#2c3e50] text-white flex justify-between items-center">
             <div>
-              <h2 className="text-[16px] font-bold">Departments</h2>
-              <p className="text-blue-100 text-[14px]">Manage school departments</p>
+              <h2 className="text-[14px] font-semibold">Departments</h2>
             </div>
             <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -667,7 +693,7 @@ const SchoolSettings: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="p-6 overflow-visible min-h-[430px]">
+          <div className="p-3 overflow-visible">
             <DepartmentManager />
           </div>
         </div>

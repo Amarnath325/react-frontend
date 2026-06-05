@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 interface DashboardStats {
@@ -31,7 +30,6 @@ interface UpcomingEvent {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     total_students: 0,
@@ -163,119 +161,111 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
-
   return (
-    <div>
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 mb-8 text-white">
-        <h2 className="text-2xl font-bold mb-2">
-          Welcome back, {user?.first_name || 'Admin'}! 👋
-        </h2>
-        <p className="text-blue-100">
-          Here's what's happening with your school today.
-        </p>
-      </div>
+    <div className="space-y-5 sm:space-y-6">
+
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map((card, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition cursor-pointer"
+            className="bg-white rounded-xl shadow-sm border border-gray-150/70 p-3.5 sm:p-4 hover:shadow-md transition cursor-pointer flex flex-col justify-between animate-fadeIn"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center text-2xl`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 ${card.bgColor} rounded-lg flex items-center justify-center text-lg sm:text-xl`}>
                 {card.icon}
               </div>
-              <span className={`text-2xl font-bold ${card.textColor}`}>{card.value}</span>
+              <span className={`text-base sm:text-lg font-extrabold ${card.textColor}`}>{card.value}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">{card.title}</h3>
+            <h3 className="text-gray-500 font-semibold text-xs sm:text-[13px] tracking-wide">{card.title}</h3>
           </div>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div>
+        <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-3 tracking-wide uppercase">Quick Actions</h3>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {quickActions.map((action, index) => (
             <button
               key={index}
               onClick={() => navigate(action.path)}
-              className="bg-white rounded-xl shadow-md p-4 text-center hover:shadow-lg transition transform hover:-translate-y-1"
+              className="bg-white rounded-xl shadow-sm border border-gray-150/70 p-3 text-center hover:shadow-md transition transform hover:-translate-y-0.5 active:scale-98"
             >
-              <div className={`w-12 h-12 ${action.color} rounded-full flex items-center justify-center text-white text-xl mx-auto mb-3`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 ${action.color} rounded-full flex items-center justify-center text-white text-base sm:text-lg mx-auto mb-2`}>
                 {action.icon}
               </div>
-              <span className="text-sm font-medium text-gray-700">{action.name}</span>
+              <span className="text-xs font-semibold text-gray-700">{action.name}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Activities and Events Side-by-Side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
         {/* Recent Activities */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Recent Activities</h3>
-            <button className="text-blue-600 text-sm hover:text-blue-700">View All →</button>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-150/70 p-4 sm:p-5">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm sm:text-base font-bold text-gray-800">Recent Activities</h3>
+            <button className="text-blue-600 text-xs font-semibold hover:text-blue-700">View All →</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {recentActivities.length > 0 ? (
               recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-xl">
+                <div key={activity.id} className="flex items-start gap-2.5 pb-2.5 border-b border-gray-100 last:border-0">
+                  <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-lg flex-shrink-0">
                     {activity.type === 'student' && '👨‍🎓'}
                     {activity.type === 'teacher' && '👩‍🏫'}
                     {activity.type === 'fee' && '💰'}
                     {activity.type === 'exam' && '📝'}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-gray-800 font-medium">{activity.title}</p>
-                    <p className="text-gray-500 text-sm">{activity.description}</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-800 font-semibold text-xs sm:text-sm truncate">{activity.title}</p>
+                    <p className="text-gray-500 text-[11px] sm:text-xs line-clamp-1">{activity.description}</p>
+                    <p className="text-gray-400 text-[10px] mt-0.5">
                       {new Date(activity.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No recent activities</p>
-                <p className="text-sm mt-2">Start by adding students or teachers</p>
+              <div className="text-center py-6 text-gray-500">
+                <p className="text-sm font-semibold">No recent activities</p>
+                <p className="text-xs text-gray-400 mt-1">Start by adding students or teachers</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Upcoming Events */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Upcoming Events</h3>
-            <button className="text-blue-600 text-sm hover:text-blue-700">View Calendar →</button>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-150/70 p-4 sm:p-5">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm sm:text-base font-bold text-gray-800">Upcoming Events</h3>
+            <button className="text-blue-600 text-xs font-semibold hover:text-blue-700">View Calendar →</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {upcomingEvents.length > 0 ? (
               upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center gap-3 pb-4 border-b border-gray-100 last:border-0">
-                  <div className="text-center min-w-[60px]">
-                    <div className="text-2xl font-bold text-gray-800">
+                <div key={event.id} className="flex items-center gap-2.5 pb-2.5 border-b border-gray-100 last:border-0">
+                  <div className="text-center min-w-[50px] bg-slate-50 py-1 rounded-lg">
+                    <div className="text-base sm:text-lg font-bold text-gray-800 leading-none">
                       {new Date(event.date).getDate()}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-[9px] text-gray-400 font-semibold uppercase mt-0.5">
                       {new Date(event.date).toLocaleString('default', { month: 'short' })}
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-gray-800 font-medium">{event.title}</p>
-                    <p className="text-gray-500 text-sm">{event.type}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-800 font-semibold text-xs sm:text-sm truncate">{event.title}</p>
+                    <p className="text-gray-400 text-[10px] sm:text-[11px] mt-0.5">{event.type}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No upcoming events</p>
-                <p className="text-sm mt-2">Create exams or events from the menu</p>
+              <div className="text-center py-6 text-gray-500">
+                <p className="text-sm font-semibold">No upcoming events</p>
+                <p className="text-xs text-gray-400 mt-1">Create exams or events from the menu</p>
               </div>
             )}
           </div>
@@ -284,25 +274,25 @@ const Dashboard: React.FC = () => {
 
       {/* Getting Started Guide (for new schools) */}
       {stats.total_students === 0 && (
-        <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">🚀 Getting Started</h3>
-          <p className="text-gray-600 mb-4">Complete these steps to set up your school:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">1</div>
-              <span className="text-gray-700">Add Classes</span>
+        <div className="mt-5 sm:mt-6 bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-xl p-4 sm:p-5 border border-green-200/60">
+          <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-1">🚀 Getting Started</h3>
+          <p className="text-xs text-gray-500 mb-3">Complete these steps to set up your school:</p>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-green-150 shadow-sm">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">1</div>
+              <span className="text-xs font-semibold text-gray-700">Add Classes</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">2</div>
-              <span className="text-gray-700">Add Subjects</span>
+            <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-green-150 shadow-sm">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</div>
+              <span className="text-gray-700 text-xs font-semibold">Add Subjects</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">3</div>
-              <span className="text-gray-700">Add Teachers</span>
+            <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-green-150 shadow-sm">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">3</div>
+              <span className="text-gray-700 text-xs font-semibold">Add Teachers</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">4</div>
-              <span className="text-gray-700">Add Students</span>
+            <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-green-150 shadow-sm">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">4</div>
+              <span className="text-gray-700 text-xs font-semibold">Add Students</span>
             </div>
           </div>
         </div>

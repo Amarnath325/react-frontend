@@ -25,7 +25,45 @@ interface MasterOption {
   label: string;
 }
 
-// Searchable Select Component
+// Toggle Switch Component (Compact size - matches Show Trashed size)
+const ToggleSwitch: React.FC<{
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  label?: string;
+}> = ({ checked, onChange, disabled = false, label }) => {
+  const button = (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`
+        relative inline-flex h-4 w-8 items-center rounded-full transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1
+        ${checked ? 'bg-green-500' : 'bg-gray-300'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      `}
+    >
+      <span
+        className={`
+          inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform
+          ${checked ? 'translate-x-4.5' : 'translate-x-1'}
+        `}
+      />
+    </button>
+  );
+
+  if (label) {
+    return (
+      <label className="flex items-center justify-between cursor-pointer w-full">
+        <span className="text-xs font-semibold text-gray-700">{label}</span>
+        {button}
+      </label>
+    );
+  }
+
+  return button;
+};
+
 // Searchable Select Component - Compact Version
 const SearchableSelect: React.FC<{
   options: { value: string; label: string }[];
@@ -33,7 +71,8 @@ const SearchableSelect: React.FC<{
   onChange: (value: string) => void;
   placeholder: string;
   isClearable?: boolean;
-}> = ({ options, value, onChange, placeholder, isClearable = true }) => {
+  className?: string;
+}> = ({ options, value, onChange, placeholder, isClearable = true, className = "w-40 text-xs" }) => {
   const selectedOption = options.find(opt => opt.value === value) || null;
   
   return (
@@ -43,14 +82,15 @@ const SearchableSelect: React.FC<{
       onChange={(selected) => onChange(selected ? selected.value : '')}
       placeholder={placeholder}
       isClearable={isClearable}
-      className="w-40 text-xs"  // Smaller width and font
+      className={className}
       classNamePrefix="react-select"
       styles={{
         control: (base: any) => ({
           ...base,
           borderRadius: '0.375rem',
           borderColor: '#d1d5db',
-          minHeight: '30px',
+          minHeight: '28px',
+          fontSize: '11px',
           boxShadow: 'none',
           '&:hover': { borderColor: '#9ca3af' },
         }),
@@ -68,8 +108,8 @@ const SearchableSelect: React.FC<{
           backgroundColor: state.isFocused ? '#eff6ff' : 'white',
           color: '#1f2937',
           cursor: 'pointer',
-          fontSize: '12px',
-          padding: '6px 10px',
+          fontSize: '11px',
+          padding: '4px 8px',
         }),
         dropdownIndicator: (base: any) => ({
           ...base,
@@ -81,11 +121,11 @@ const SearchableSelect: React.FC<{
         }),
         placeholder: (base: any) => ({
           ...base,
-          fontSize: '12px',
+          fontSize: '11px',
         }),
         singleValue: (base: any) => ({
           ...base,
-          fontSize: '12px',
+          fontSize: '11px',
         }),
       }}
     />
@@ -1108,25 +1148,23 @@ const ExaminationManager: React.FC = () => {
   }
 
   return (
-    <div className="-mx-6 -mt-6">
-      {/* Header */}
-      <div className="px-3 pt-3 pb-3"></div>
+    <div className="space-y-3">
+      {/* Action Buttons, Search and Show per page - ALL IN ONE ROW */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs">
+        {/* Left side: Search and Show */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search examinations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none w-44"
+          />
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Search:</span>
-            <input
-              type="text"
-              placeholder="Exam Name, Class or Academic Year..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
+          {/* Show pagination limit */}
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-1.5 py-0.5">
+            <span className="text-[10px] text-gray-500 font-semibold uppercase">Show:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
@@ -1134,7 +1172,7 @@ const ExaminationManager: React.FC = () => {
                 setItemsPerPage(val);
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
@@ -1144,177 +1182,201 @@ const ExaminationManager: React.FC = () => {
               <option value="all">All</option>
             </select>
           </div>
+
           {(searchTerm || filterAcademicYear || filterClass || filterExamType || filterStatus) && (
-            <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700">Clear Filters ✕</button>
+            <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 font-medium">
+              Clear
+            </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={downloadSampleFile} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} /></svg>
+        {/* Right side: Action Buttons */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={downloadSampleFile}
+            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+            title="Download Excel Sample Template"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             Sample
           </button>
-          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeWidth={2} /></svg>
+          
+          <label className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition cursor-pointer text-xs font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
             Import
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
           </label>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeWidth={2} /></svg>
+          
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
             Export
           </button>
-          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={2} /></svg>
+          
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs font-medium"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Add New
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2 px-6 pb-4">
+      {/* Filters - Searchable Dropdowns (No title) */}
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <SearchableSelect 
           options={academicYearOptions} 
           value={filterAcademicYear} 
           onChange={setFilterAcademicYear} 
-          placeholder="Academic Year"  // Shorter placeholder
+          placeholder="Academic Years"
         />
         <SearchableSelect 
           options={classOptions} 
           value={filterClass} 
           onChange={setFilterClass} 
-          placeholder="Class"  // Shorter placeholder
+          placeholder="Classes"
         />
         <SearchableSelect 
           options={examTypeOptions} 
           value={filterExamType} 
           onChange={setFilterExamType} 
-          placeholder="Exam Type"  // Shorter placeholder
+          placeholder="Exam Types"
         />
         <SearchableSelect 
           options={statusOptions} 
           value={filterStatus} 
           onChange={setFilterStatus} 
-          placeholder="Status"  // Shorter placeholder
+          placeholder="Status"
         />
       </div>
 
       {/* Bulk Actions Bar */}
       {selectedItems.size > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-blue-800 font-medium">{selectedItems.size} item(s) selected</div>
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 p-2 rounded text-xs text-blue-700">
+          <span className="font-semibold">{selectedItems.size} item(s) selected</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => handleBulkStatusUpdate(true)} disabled={bulkUpdating} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth={2} /></svg>
-              {bulkUpdating ? 'Updating...' : 'Active'}
+            <button onClick={() => handleBulkStatusUpdate(true)} disabled={bulkUpdating} className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-medium">
+              {bulkUpdating ? 'Updating...' : 'Mark Active'}
             </button>
-            <button onClick={() => handleBulkStatusUpdate(false)} disabled={bulkUpdating} className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={2} /></svg>
-              {bulkUpdating ? 'Updating...' : 'Inactive'}
+            <button onClick={() => handleBulkStatusUpdate(false)} disabled={bulkUpdating} className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-red-700 font-medium">
+              {bulkUpdating ? 'Updating...' : 'Mark Inactive'}
             </button>
-            <button onClick={() => setSelectedItems(new Set())} className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition">Clear Selection</button>
+            <button onClick={() => setSelectedItems(new Set())} className="px-2 py-0.5 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition">
+              Clear Selection
+            </button>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto border-y border-gray-200">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left">
-                <input type="checkbox" checked={selectedItems.size === paginatedData.length && paginatedData.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" />
+      {/* Table view */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm text-xs">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold uppercase text-[10px]">
+              <th className="py-2 px-2.5 w-8">
+                <input
+                  type="checkbox"
+                  checked={paginatedData.length > 0 && paginatedData.every(item => selectedItems.has(item.id))}
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                />
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('academic_year_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
                 Academic Year {getSortIcon('academic_year_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('class_name')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
                 Class {getSortIcon('class_name')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('name')}>
                 Exam Name {getSortIcon('name')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('exam_type_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('exam_type_label')}>
                 Exam Type {getSortIcon('exam_type_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('term_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('term_label')}>
                 Term {getSortIcon('term_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Start Date</th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">End Date</th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('max_marks')}>
+              <th className="py-2 px-2.5">Start Date</th>
+              <th className="py-2 px-2.5">End Date</th>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('max_marks')}>
                 Max Marks {getSortIcon('max_marks')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('passing_marks')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('passing_marks')}>
                 Passing Marks {getSortIcon('passing_marks')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('is_active')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-center w-28" onClick={() => handleSort('is_active')}>
                 Status {getSortIcon('is_active')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Actions</th>
+              <th className="py-2 px-2.5 w-20 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-100">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-12 text-center text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth={2} />
-                    </svg>
-                    <p>No examinations found</p>
-                    <button onClick={openAddModal} className="mt-2 text-blue-600 hover:text-blue-700 font-medium">Click here to add</button>
-                  </div>
+                <td colSpan={12} className="py-6 text-center text-gray-500 font-medium">
+                  No examinations found.
                 </td>
               </tr>
             ) : (
               paginatedData.map((exam) => (
-                <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-3 py-2">
-                    <input type="checkbox" checked={selectedItems.has(exam.id)} onChange={() => handleSelectRow(exam.id)} className="w-4 h-4 text-blue-600 rounded" />
+                <tr key={exam.id} className="hover:bg-gray-50 transition text-gray-700">
+                  <td className="py-1.5 px-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(exam.id)}
+                      onChange={() => handleSelectRow(exam.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                    />
                   </td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getAcademicYearLabel(exam.academic_year_id)}</td>
-                  <td className="px-3 py-2 text-gray-700 font-medium text-[12px]">{getClassName(exam.class_id)}</td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{exam.name}</td>
-                  <td className="px-3 py-2">
-                    <span className="px-2 py-0.5 text-[11px] bg-purple-100 text-purple-800 rounded-full">{getExamTypeLabel(exam.exam_type)}</span>
+                  <td className="py-1.5 px-2.5">{getAcademicYearLabel(exam.academic_year_id)}</td>
+                  <td className="py-1.5 px-2.5 font-medium text-gray-900">{getClassName(exam.class_id)}</td>
+                  <td className="py-1.5 px-2.5 font-medium text-gray-800">{exam.name}</td>
+                  <td className="py-1.5 px-2.5">
+                    <span className="px-2 py-0.5 text-[10px] bg-purple-50 text-purple-700 rounded-full font-medium">
+                      {getExamTypeLabel(exam.exam_type)}
+                    </span>
                   </td>
-                  <td className="px-3 py-2">
-                    <span className="px-2 py-0.5 text-[11px] bg-blue-100 text-blue-800 rounded-full">{getTermLabel(exam.term)}</span>
+                  <td className="py-1.5 px-2.5">
+                    <span className="px-2 py-0.5 text-[10px] bg-blue-50 text-blue-700 rounded-full font-medium">
+                      {getTermLabel(exam.term)}
+                    </span>
                   </td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(exam.start_date)}</td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(exam.end_date)}</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold text-[12px]">{exam.max_marks}</td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{exam.passing_marks}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(exam.id)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
-                          exam.is_active ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                        title={exam.is_active ? 'Click to deactivate' : 'Click to activate'}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            exam.is_active ? 'translate-x-4' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <span className={`text-[11px] font-medium ${exam.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                  <td className="py-1.5 px-2.5 text-gray-600">{formatDisplayDate(exam.start_date)}</td>
+                  <td className="py-1.5 px-2.5 text-gray-600">{formatDisplayDate(exam.end_date)}</td>
+                  <td className="py-1.5 px-2.5 font-semibold text-gray-900">{exam.max_marks}</td>
+                  <td className="py-1.5 px-2.5 text-gray-700">{exam.passing_marks}</td>
+                  <td className="py-1.5 px-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <ToggleSwitch
+                        checked={exam.is_active}
+                        onChange={() => handleToggleStatus(exam.id)}
+                      />
+                      <span className={`text-[10px] font-medium ${exam.is_active ? 'text-green-600' : 'text-gray-400'}`}>
                         {exam.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1.5">
+                  <td className="py-1.5 px-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button onClick={() => openEditModal(exam)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth={2} />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
                       </button>
                       <button onClick={() => handleDelete(exam.id, exam.name)} className="p-1 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2} />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </div>
@@ -1326,100 +1388,238 @@ const ExaminationManager: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Controls */}
       {totalPages > 1 && itemsPerPage !== -1 && (
-        <div className="flex justify-end items-center px-6 py-4 gap-2">
-          <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">«</button>
-          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">‹</button>
-          <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
-          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">›</button>
-          <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm">»</button>
+        <div className="flex items-center justify-between border-t border-gray-150 bg-white px-2 py-1.5 text-xs">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-0.5 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative ml-2 inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-0.5 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] text-gray-500">
+                Showing{' '}
+                <span className="font-semibold text-gray-700">
+                  {itemsPerPage === -1 ? 1 : (currentPage - 1) * itemsPerPage + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-gray-700">
+                  {itemsPerPage === -1
+                    ? filteredData.length
+                    : Math.min(currentPage * itemsPerPage, filteredData.length)}
+                </span>{' '}
+                of <span className="font-semibold text-gray-700">{filteredData.length}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l px-1.5 py-0.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  &lsaquo;
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center px-2 py-0.5 text-xs font-semibold focus:z-20 ${
+                      currentPage === page
+                        ? 'z-10 bg-blue-600 text-white'
+                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r px-1.5 py-0.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  &rsaquo;
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 rounded-t-xl flex-shrink-0">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-white">{editingItem ? 'Edit Examination' : 'Add New Examination'}</h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-white hover:bg-white/20 rounded-lg p-1 transition">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={2} /></svg>
-                </button>
-              </div>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-bold text-gray-800">
+                {editingItem ? 'Edit Examination' : 'Add Examination'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-5 overflow-y-auto flex-1">
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Academic Year *</label>
-                  <SearchableSelect
-                    options={academicYearOptions}
-                    value={formData.academic_year_id}
-                    onChange={(value) => setFormData(prev => ({ ...prev, academic_year_id: value }))}
-                    placeholder="Select Academic Year"
-                    isClearable={false}
+
+            <div className="text-xs">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Academic Year <span className="text-red-500">*</span></label>
+                    <SearchableSelect
+                      options={academicYearOptions}
+                      value={formData.academic_year_id}
+                      onChange={(value) => setFormData(prev => ({ ...prev, academic_year_id: value }))}
+                      placeholder="Select Year"
+                      isClearable={false}
+                      className="w-full text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Class <span className="text-red-500">*</span></label>
+                    <SearchableSelect
+                      options={classOptions}
+                      value={formData.class_id}
+                      onChange={(value) => setFormData(prev => ({ ...prev, class_id: value }))}
+                      placeholder="Select Class"
+                      isClearable={false}
+                      className="w-full text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Exam Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Half Yearly Examination 2024"
+                    className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    required
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Class *</label>
-                  <SearchableSelect
-                    options={classOptions}
-                    value={formData.class_id}
-                    onChange={(value) => setFormData(prev => ({ ...prev, class_id: value }))}
-                    placeholder="Select Class"
-                    isClearable={false}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Exam Type <span className="text-red-500">*</span></label>
+                    <SearchableSelect
+                      options={examTypeOptions}
+                      value={formData.exam_type}
+                      onChange={(value) => setFormData(prev => ({ ...prev, exam_type: value }))}
+                      placeholder="Select Type"
+                      isClearable={false}
+                      className="w-full text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Term <span className="text-red-500">*</span></label>
+                    <SearchableSelect
+                      options={termSelectOptions}
+                      value={formData.term}
+                      onChange={(value) => setFormData(prev => ({ ...prev, term: value }))}
+                      placeholder="Select Term"
+                      isClearable={false}
+                      className="w-full text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Start Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="start_date"
+                      value={formData.start_date}
+                      onChange={handleInputChange}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">End Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="end_date"
+                      value={formData.end_date}
+                      onChange={handleInputChange}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Max Marks <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      name="max_marks"
+                      value={formData.max_marks}
+                      onChange={handleInputChange}
+                      min="1"
+                      max="1000"
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Passing Marks <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      name="passing_marks"
+                      value={formData.passing_marks}
+                      onChange={handleInputChange}
+                      min="0"
+                      max={formData.max_marks}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2 bg-gray-50 rounded border border-gray-150">
+                  <ToggleSwitch
+                    checked={formData.is_active}
+                    onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                    label="Active Status"
                   />
                 </div>
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Exam Name *</label>
-                  <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Half Yearly Examination 2024" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Exam Type *</label>
-                  <SearchableSelect
-                    options={examTypeOptions}
-                    value={formData.exam_type}
-                    onChange={(value) => setFormData(prev => ({ ...prev, exam_type: value }))}
-                    placeholder="Select Exam Type"
-                    isClearable={false}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Term *</label>
-                  <SearchableSelect
-                    options={termSelectOptions}
-                    value={formData.term}
-                    onChange={(value) => setFormData(prev => ({ ...prev, term: value }))}
-                    placeholder="Select Term"
-                    isClearable={false}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Start Date *</label>
-                  <input type="date" name="start_date" value={formData.start_date} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">End Date *</label>
-                  <input type="date" name="end_date" value={formData.end_date} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Max Marks *</label>
-                  <input type="number" name="max_marks" value={formData.max_marks} onChange={handleInputChange} min="1" max="1000" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Passing Marks *</label>
-                  <input type="number" name="passing_marks" value={formData.passing_marks} onChange={handleInputChange} min="0" max={formData.max_marks} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="sm:col-span-2 flex items-center gap-3">
-                  <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded" />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">Active</label>
+
+                <div className="flex justify-end gap-2 pt-3 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    onClick={handleSubmit}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs font-medium"
+                  >
+                    {editingItem ? 'Update' : 'Add'} Examination
+                  </button>
                 </div>
               </form>
-            </div>
-            <div className="px-5 py-3 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0 bg-gray-50 rounded-b-xl">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">Cancel</button>
-              <button type="submit" onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">{editingItem ? 'Update' : 'Create'} Exam</button>
             </div>
           </div>
         </div>

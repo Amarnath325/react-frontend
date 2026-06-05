@@ -30,32 +30,43 @@ interface ClassOption {
   section: string | null;
 }
 
-// Toggle Switch Component
+// Toggle Switch Component (Compact size - matches Show Trashed size)
 const ToggleSwitch: React.FC<{
   checked: boolean;
   onChange: (checked: boolean) => void;
-  label: string;
-}> = ({ checked, onChange, label }) => {
-  return (
-    <label className="flex items-center justify-between cursor-pointer">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
+  disabled?: boolean;
+  label?: string;
+}> = ({ checked, onChange, disabled = false, label }) => {
+  const button = (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`
+        relative inline-flex h-4 w-8 items-center rounded-full transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1
+        ${checked ? 'bg-green-500' : 'bg-gray-300'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      `}
+    >
+      <span
         className={`
-          relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          ${checked ? 'bg-green-500' : 'bg-gray-300'}
+          inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform
+          ${checked ? 'translate-x-4.5' : 'translate-x-1'}
         `}
-      >
-        <span
-          className={`
-            inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-6' : 'translate-x-1'}
-          `}
-        />
-      </button>
-    </label>
+      />
+    </button>
   );
+
+  if (label) {
+    return (
+      <label className="flex items-center justify-between cursor-pointer w-full">
+        <span className="text-xs font-semibold text-gray-700">{label}</span>
+        {button}
+      </label>
+    );
+  }
+
+  return button;
 };
 
 // Searchable Select Component
@@ -1219,17 +1230,28 @@ const FeeStructureManager: React.FC = () => {
   const customSelectStyles = {
     control: (base: any) => ({
       ...base,
-      borderRadius: '0.5rem',
+      borderRadius: '0.375rem',
       borderColor: '#d1d5db',
-      minHeight: '34px',
+      minHeight: '28px',
+      fontSize: '11px',
       boxShadow: 'none',
       '&:hover': { borderColor: '#9ca3af' },
+    }),
+    valueContainer: (base: any) => ({
+      ...base,
+      padding: '0 6px',
+    }),
+    singleValue: (base: any) => ({
+      ...base,
+      fontSize: '11px',
     }),
     option: (base: any, state: any) => ({
       ...base,
       backgroundColor: state.isFocused ? '#eff6ff' : 'white',
       color: '#1f2937',
       cursor: 'pointer',
+      fontSize: '11px',
+      padding: '4px 8px',
     }),
   };
 
@@ -1245,25 +1267,23 @@ const FeeStructureManager: React.FC = () => {
   }
 
   return (
-    <div className="-mx-6 -mt-6">
-      <div className="px-3 pt-3 pb-3">
-      </div>
+    <div className="space-y-3">
       {/* Action Buttons, Search and Show per page - ALL IN ONE ROW */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs">
         {/* Left side: Search and Show */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Search:</span>
-            <input
-              type="text"
-              placeholder="Class, Fee Head or Academic Year..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search fee structures..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none w-44"
+          />
+
+          {/* Show pagination limit */}
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-1.5 py-0.5">
+            <span className="text-[10px] text-gray-500 font-semibold uppercase">Show:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
@@ -1271,45 +1291,72 @@ const FeeStructureManager: React.FC = () => {
                 setItemsPerPage(value);
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
-              <option value={50}>50</option>
+              <option value={55}>50</option>
               <option value={100}>100</option>
               <option value="all">All</option>
             </select>
           </div>
+
           {(searchTerm || filterAcademicYear || filterClass || filterFeeHead || filterStatus) && (
-            <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700">Clear Filters ✕</button>
+            <button
+              onClick={clearFilters}
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
+            >
+              Clear
+            </button>
           )}
         </div>
 
         {/* Right side: Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button onClick={downloadSampleFile} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={downloadSampleFile}
+            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+            title="Download Excel Sample Template"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             Sample
           </button>
-          <label className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          
+          <label className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition cursor-pointer text-xs font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
             Import
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
           </label>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+          
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
             Export
           </button>
-          <button onClick={openAddModal} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs font-medium"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Add New
           </button>
         </div>
       </div>
 
       {/* Filters - Searchable Dropdowns (No title) */}
-      <div className="flex items-center gap-2 px-6 pb-4">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <SearchableSelect
           options={academicYearSelectOptions}
           value={filterAcademicYear}
@@ -1338,34 +1385,26 @@ const FeeStructureManager: React.FC = () => {
 
       {/* Bulk Actions Bar */}
       {selectedItems.size > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-blue-800 font-medium">
-            {selectedItems.size} item(s) selected
-          </div>
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 p-2 rounded text-xs text-blue-700">
+          <span className="font-semibold">{selectedItems.size} item(s) selected</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleBulkStatusUpdate(true)}
               disabled={bulkUpdating}
-              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+              className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-medium"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {bulkUpdating ? 'Updating...' : 'Active'}
+              {bulkUpdating ? 'Updating...' : 'Mark Active'}
             </button>
             <button
               onClick={() => handleBulkStatusUpdate(false)}
               disabled={bulkUpdating}
-              className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-red-700 font-medium"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              {bulkUpdating ? 'Updating...' : 'Inactive'}
+              {bulkUpdating ? 'Updating...' : 'Mark Inactive'}
             </button>
             <button
               onClick={() => setSelectedItems(new Set())}
-              className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition"
+              className="px-2 py-0.5 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
             >
               Clear Selection
             </button>
@@ -1373,97 +1412,82 @@ const FeeStructureManager: React.FC = () => {
         </div>
       )}
 
-      {/* Table - Full width */}
-      <div className="overflow-x-auto border-y border-gray-200">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left w-10">
+      {/* Table view */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm text-xs">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold uppercase text-[10px]">
+              <th className="py-2 px-2.5 w-8">
                 <input
                   type="checkbox"
-                  checked={selectedItems.size === paginatedData.length && paginatedData.length > 0}
+                  checked={paginatedData.length > 0 && paginatedData.every(item => selectedItems.has(item.id))}
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded w-4 h-4"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
                 />
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
                 Academic Year {getSortIcon('academic_year_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
                 Class {getSortIcon('class_name')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('fee_head_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('fee_head_label')}>
                 Fee Head {getSortIcon('fee_head_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('amount')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('amount')}>
                 Amount {getSortIcon('amount')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('frequency_label')}>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('frequency_label')}>
                 Frequency {getSortIcon('frequency_label')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Due Date</th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('is_active')}>
+              <th className="py-2 px-2.5">Due Date</th>
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-center w-28" onClick={() => handleSort('is_active')}>
                 Status {getSortIcon('is_active')}
               </th>
-              <th className="px-3 py-2 text-left text-[14px] font-semibold text-gray-700">Actions</th>
+              <th className="py-2 px-2.5 w-20 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-100">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-[12px]">No fee structures found</p>
-                    <button onClick={openAddModal} className="mt-2 text-blue-600 hover:text-blue-700 font-medium text-[12px]">Click here to add</button>
-                  </div>
+                <td colSpan={9} className="py-6 text-center text-gray-500 font-medium">
+                  No fee structures found.
                 </td>
               </tr>
             ) : (
               paginatedData.map((item) => (
-                <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedItems.has(item.id) ? 'bg-blue-50' : ''}`}>
-                  <td className="px-3 py-2">
+                <tr key={item.id} className="hover:bg-gray-50 transition text-gray-700">
+                  <td className="py-1.5 px-2.5">
                     <input
                       type="checkbox"
                       checked={selectedItems.has(item.id)}
                       onChange={() => handleSelectRow(item.id)}
-                      className="rounded w-4 h-4"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
                     />
                   </td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getAcademicYearLabel(item.academic_year_id)}</td>
-                  <td className="px-3 py-2 text-gray-700 font-medium text-[12px]">{getClassName(item.class_id)}</td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{getFeeHeadLabel(item.fee_head)}</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold text-[12px]">₹{formatAmount(item.amount)}</td>
-                  <td className="px-3 py-2">
-                    <span className="px-2 py-0.5 text-[11px] bg-blue-100 text-blue-800 rounded-full">
+                  <td className="py-1.5 px-2.5">{getAcademicYearLabel(item.academic_year_id)}</td>
+                  <td className="py-1.5 px-2.5 font-medium text-gray-900">{getClassName(item.class_id)}</td>
+                  <td className="py-1.5 px-2.5">{getFeeHeadLabel(item.fee_head)}</td>
+                  <td className="py-1.5 px-2.5 font-semibold text-gray-900">₹{formatAmount(item.amount)}</td>
+                  <td className="py-1.5 px-2.5">
+                    <span className="px-2 py-0.5 text-[10px] bg-blue-50 text-blue-700 rounded-full font-medium">
                       {getFrequencyLabel(item.frequency)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-gray-700 text-[12px]">{formatDisplayDate(item.due_date) || '-'}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(item.id)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
-                          item.is_active ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                        title={item.is_active ? 'Click to deactivate' : 'Click to activate'}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            item.is_active ? 'translate-x-4' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <span className={`text-[11px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-500'}`}>
+                  <td className="py-1.5 px-2.5 text-gray-750">{formatDisplayDate(item.due_date) || '-'}</td>
+                  <td className="py-1.5 px-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <ToggleSwitch
+                        checked={item.is_active}
+                        onChange={() => handleToggleStatus(item.id)}
+                      />
+                      <span className={`text-[10px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
                         {item.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1.5">
+                  <td className="py-1.5 px-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button onClick={() => openEditModal(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1483,102 +1507,153 @@ const FeeStructureManager: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination - Right Corner */}
+      {/* Pagination Controls */}
       {totalPages > 1 && itemsPerPage !== -1 && (
-        <div className="flex justify-end items-center px-6 py-4 gap-2">
-          <button
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-            className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm"
-          >
-            «
-          </button>
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm"
-          >
-            ‹
-          </button>
-          <span className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-            className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 text-sm"
-          >
-            »
-          </button>
+        <div className="flex items-center justify-between border-t border-gray-150 bg-white px-2 py-1.5 text-xs">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-0.5 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative ml-2 inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-0.5 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] text-gray-500">
+                Showing{' '}
+                <span className="font-semibold text-gray-700">
+                  {itemsPerPage === -1 ? 1 : (currentPage - 1) * itemsPerPage + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-gray-700">
+                  {itemsPerPage === -1
+                    ? filteredData.length
+                    : Math.min(currentPage * itemsPerPage, filteredData.length)}
+                </span>{' '}
+                of <span className="font-semibold text-gray-700">{filteredData.length}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l px-1.5 py-0.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  &lsaquo;
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center px-2 py-0.5 text-xs font-semibold focus:z-20 ${
+                      currentPage === page
+                        ? 'z-10 bg-blue-600 text-white'
+                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r px-1.5 py-0.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  &rsaquo;
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 rounded-t-xl flex-shrink-0">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-white">
-                  {editingItem ? 'Edit Fee Structure' : 'Add Fee Structure'}
-                </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-white hover:bg-white/20 rounded-lg p-1 transition">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-bold text-gray-800">
+                {editingItem ? 'Edit Fee Structure' : 'Add Fee Structure'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-5 overflow-y-auto flex-1">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year <span className="text-red-500">*</span></label>
-                  <Select options={academicYearSelectOptions} value={academicYearSelectOptions.find(opt => opt.value === formData.academic_year_id)} onChange={(selected) => handleSelectChange('academic_year_id', selected)} placeholder="Select academic year..." styles={customSelectStyles} required />
+            
+            <div className="text-xs">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Academic Year <span className="text-red-500">*</span></label>
+                    <Select options={academicYearSelectOptions} value={academicYearSelectOptions.find(opt => opt.value === formData.academic_year_id)} onChange={(selected) => handleSelectChange('academic_year_id', selected)} placeholder="Select year..." styles={customSelectStyles} required />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Class <span className="text-red-500">*</span></label>
+                    <Select options={classSelectOptions} value={classSelectOptions.find(opt => opt.value === formData.class_id)} onChange={(selected) => handleSelectChange('class_id', selected)} placeholder="Select class..." styles={customSelectStyles} required />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-red-500">*</span></label>
-                  <Select options={classSelectOptions} value={classSelectOptions.find(opt => opt.value === formData.class_id)} onChange={(selected) => handleSelectChange('class_id', selected)} placeholder="Select class..." styles={customSelectStyles} required />
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Fee Head <span className="text-red-500">*</span></label>
+                    <Select options={feeHeadSelectOptions} value={feeHeadSelectOptions.find(opt => opt.value === formData.fee_head)} onChange={(selected) => handleSelectChange('fee_head', selected)} placeholder="Select head..." styles={customSelectStyles} required />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Frequency <span className="text-red-500">*</span></label>
+                    <Select options={frequencySelectOptions} value={frequencySelectOptions.find(opt => opt.value === formData.frequency)} onChange={(selected) => handleSelectChange('frequency', selected)} placeholder="Select frequency..." styles={customSelectStyles} required />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fee Head <span className="text-red-500">*</span></label>
-                  <Select options={feeHeadSelectOptions} value={feeHeadSelectOptions.find(opt => opt.value === formData.fee_head)} onChange={(selected) => handleSelectChange('fee_head', selected)} placeholder="Select fee head..." styles={customSelectStyles} required />
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Amount (₹) <span className="text-red-500">*</span></label>
+                    <input type="number" name="amount" value={formData.amount || ''} onChange={handleInputChange} min="10" max="99999999" step="1" className={`w-full px-2 py-1 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none ${errors.amount ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} placeholder="e.g. 5000" required />
+                    {errors.amount && <p className="text-red-500 text-[10px] mt-0.5">{errors.amount}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Late Fee (₹)</label>
+                    <input type="number" name="late_fee_amount" value={formData.late_fee_amount || ''} onChange={handleInputChange} min="0" max="999999" step="1" className={`w-full px-2 py-1 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none ${errors.late_fee_amount ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} placeholder="e.g. 100" />
+                    {errors.late_fee_amount && <p className="text-red-500 text-[10px] mt-0.5">{errors.late_fee_amount}</p>}
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span><span className="text-gray-400 text-xs ml-1">(2-8 digits)</span></label>
-                  <input type="number" name="amount" value={formData.amount || ''} onChange={handleInputChange} min="10" max="99999999" step="1" className={`w-full px-3 py-2 border rounded-lg ${errors.amount ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} required />
-                  {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Due Date</label>
+                  <input type="date" name="due_date" value={formData.due_date} onChange={handleInputChange} className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency <span className="text-red-500">*</span></label>
-                  <Select options={frequencySelectOptions} value={frequencySelectOptions.find(opt => opt.value === formData.frequency)} onChange={(selected) => handleSelectChange('frequency', selected)} placeholder="Select frequency..." styles={customSelectStyles} required />
+
+                <div className="flex gap-2.5 pt-1">
+                  <div className="flex-1 p-2 bg-gray-50 rounded border border-gray-150">
+                    <ToggleSwitch checked={formData.is_optional} onChange={(checked) => setFormData(prev => ({ ...prev, is_optional: checked }))} label="Optional Fee" />
+                  </div>
+                  <div className="flex-1 p-2 bg-gray-50 rounded border border-gray-150">
+                    <ToggleSwitch checked={formData.is_active} onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} label="Active Status" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date <span className="text-gray-400 text-xs">(Optional)</span></label>
-                  <input type="date" name="due_date" value={formData.due_date} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Late Fee (₹) <span className="text-gray-400 text-xs">(Optional, 2-6 digits)</span></label>
-                  <input type="number" name="late_fee_amount" value={formData.late_fee_amount || ''} onChange={handleInputChange} min="10" max="999999" step="1" className={`w-full px-3 py-2 border rounded-lg ${errors.late_fee_amount ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
-                  {errors.late_fee_amount && <p className="text-red-500 text-xs mt-1">{errors.late_fee_amount}</p>}
-                </div>
-                <div className="space-y-3 pt-2">
-                  <ToggleSwitch checked={formData.is_optional} onChange={(checked) => setFormData(prev => ({ ...prev, is_optional: checked }))} label="Optional Fee" />
-                  <ToggleSwitch checked={formData.is_active} onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} label="Active" />
+
+                {/* BUTTONS */}
+                <div className="flex justify-end gap-2 pt-3 border-t">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition text-xs font-medium">Cancel</button>
+                  <button type="submit" onClick={handleSubmit} className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs font-medium">
+                    {editingItem ? 'Update' : 'Add'} Fee Structure
+                  </button>
                 </div>
               </form>
-            </div>
-            <div className="px-5 py-3 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0 bg-gray-50 rounded-b-xl">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">Cancel</button>
-              <button type="submit" onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                {editingItem ? 'Update' : 'Add'} Fee Structure
-              </button>
             </div>
           </div>
         </div>
