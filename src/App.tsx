@@ -13,9 +13,13 @@ import SectionManager from './components/SectionManager';
 import SubjectManager from './components/SubjectManager';
 import TimetableGenerator from './components/TimetableGenerator';
 import TeacherManager from './pages/TeacherManager';
+import ClassTeacherManager from './components/ClassTeacherManager';
+import HolidayManager from './components/HolidayManager';
+import WeekoffManager from './components/WeekoffManager';
 
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
+import AcademicCalendarPage from './pages/AcademicCalendarPage';
 
 // Protected route wrapper with Layout (sidebar will be shown)
 const ProtectedRouteWithLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -228,6 +232,42 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <TimetableGenerator />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/academic/calendar"
+        element={
+          <ProtectedRouteWithLayout>
+            <AcademicCalendarPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/academic/class-teacher"
+        element={
+          <ProtectedRouteWithLayout>
+            <ClassTeacherManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/academic/holidays"
+        element={
+          <ProtectedRouteWithLayout>
+            <HolidayManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/academic/weekoff"
+        element={
+          <ProtectedRouteWithLayout>
+            <WeekoffManager />
           </ProtectedRouteWithLayout>
         }
       />
