@@ -16,6 +16,17 @@ import TeacherManager from './pages/TeacherManager';
 import ClassTeacherManager from './components/ClassTeacherManager';
 import HolidayManager from './components/HolidayManager';
 import WeekoffManager from './components/WeekoffManager';
+import LibrarySettingsManager from './components/LibrarySettingsManager';
+import BookCategoryManager from './components/BookCategoryManager';
+import BookSubCategoryManager from './components/BookSubCategoryManager';
+import AuthorPublisherManager from './components/AuthorPublisherManager';
+import BookInventoryManager from './components/BookInventoryManager';
+import RackShelfManager from './components/RackShelfManager';
+import LibraryMemberManager from './components/LibraryMemberManager';
+import BookIssueReturnManager from './components/BookIssueReturnManager';
+import BookReservationManager from './components/BookReservationManager';
+import FineCollectionManager from './components/FineCollectionManager';
+import LibraryDashboard from './components/LibraryDashboard';
 
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
@@ -357,24 +368,116 @@ function AppContent() {
       />
       
       <Route
-        path="/library/books"
+        path="/library"
+        element={<Navigate to="/library/dashboard" replace />}
+      />
+
+      <Route
+        path="/library/dashboard"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Library Books</h1>
-              <p className="text-gray-600">Manage library books</p>
-            </div>
+            <LibraryDashboard />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/library/settings"
+        element={
+          <ProtectedRouteWithLayout>
+            <LibrarySettingsManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/library/sub-categories"
+        element={
+          <ProtectedRouteWithLayout>
+            <BookSubCategoryManager />
           </ProtectedRouteWithLayout>
         }
       />
       
       <Route
-        path="/library/issue"
+        path="/library/categories"
+        element={
+          <ProtectedRouteWithLayout>
+            <BookCategoryManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/authors-publishers"
+        element={
+          <ProtectedRouteWithLayout>
+            <AuthorPublisherManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/books"
+        element={
+          <ProtectedRouteWithLayout>
+            <BookInventoryManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/racks"
+        element={
+          <ProtectedRouteWithLayout>
+            <RackShelfManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/members"
+        element={
+          <ProtectedRouteWithLayout>
+            <LibraryMemberManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/transactions"
+        element={
+          <ProtectedRouteWithLayout>
+            <BookIssueReturnManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/reservations"
+        element={
+          <ProtectedRouteWithLayout>
+            <BookReservationManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/fines"
+        element={
+          <ProtectedRouteWithLayout>
+            <FineCollectionManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      
+      <Route
+        path="/library/reports"
         element={
           <ProtectedRouteWithLayout>
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Issue Book</h1>
-              <p className="text-gray-600">Issue books to students</p>
+              <h1 className="text-2xl font-bold text-gray-800 mb-4">Library Reports & Analytics</h1>
+              <p className="text-gray-600">Generate reports for popular books, checkout histories, overdue logs, and collected fines.</p>
             </div>
           </ProtectedRouteWithLayout>
         }

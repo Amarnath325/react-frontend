@@ -1430,7 +1430,7 @@ const SubjectManager: React.FC = () => {
                   <td className="py-1.5 px-2.5 text-center">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${item.is_elective
                       ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-slate-50 text-slate-650 border border-slate-200'
+                      : 'bg-slate-50 text-slate-600 border border-slate-200'
                       }`}>
                       {item.is_elective ? 'Elective' : 'Core'}
                     </span>
