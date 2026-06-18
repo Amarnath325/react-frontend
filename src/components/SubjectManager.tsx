@@ -1253,7 +1253,7 @@ const SubjectManager: React.FC = () => {
                   </button>
                   <button
                     onClick={handleBulkDelete}
-                    className="px-2 py-0.5 bg-red-650 text-white rounded hover:bg-red-700 font-medium"
+                    className="px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
                   >
                     Delete
                   </button>
@@ -1268,7 +1268,7 @@ const SubjectManager: React.FC = () => {
                   </button>
                   <button
                     onClick={handleBulkDelete}
-                    className="px-2 py-0.5 bg-red-650 text-white rounded hover:bg-red-700 font-medium"
+                    className="px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
                   >
                     Delete Permanently
                   </button>

@@ -27,6 +27,25 @@ import BookIssueReturnManager from './components/BookIssueReturnManager';
 import BookReservationManager from './components/BookReservationManager';
 import FineCollectionManager from './components/FineCollectionManager';
 import LibraryDashboard from './components/LibraryDashboard';
+import TransportPlaceholder from './components/TransportPlaceholder';
+import VehicleManager from './components/VehicleManager';
+import VehicleTypeManager from './components/VehicleTypeManager';
+import DriverManager from './components/DriverManager';
+import RouteManager from './components/RouteManager';
+import StopManager from './components/StopManager';
+import TripManager from './components/TripManager';
+import FuelManager from './components/FuelManager';
+import ComplaintManager from './components/ComplaintManager';
+import DocumentManager from './components/DocumentManager';
+import MaintenanceManager from './components/MaintenanceManager';
+import AllocationManager from './components/AllocationManager';
+import TransportAttendanceManager from './components/TransportAttendanceManager';
+import GpsTrackingManager from './components/GpsTrackingManager';
+import TransportFeeManager from './components/TransportFeeManager';
+
+
+
+
 
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
@@ -484,13 +503,159 @@ function AppContent() {
       />
       
       <Route
+        path="/transport"
+        element={<Navigate to="/transport/dashboard" replace />}
+      />
+
+      <Route
+        path="/transport/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportPlaceholder />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/vehicle-types"
+        element={
+          <ProtectedRouteWithLayout>
+            <VehicleTypeManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/vehicles"
+        element={
+          <ProtectedRouteWithLayout>
+            <VehicleManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/drivers"
+        element={
+          <ProtectedRouteWithLayout>
+            <DriverManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
         path="/transport/routes"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Transport Routes</h1>
-              <p className="text-gray-600">Manage transport routes</p>
-            </div>
+            <RouteManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/stops"
+        element={
+          <ProtectedRouteWithLayout>
+            <StopManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/allocations"
+        element={
+          <ProtectedRouteWithLayout>
+            <AllocationManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/trips"
+        element={
+          <ProtectedRouteWithLayout>
+            <TripManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/attendance"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportAttendanceManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/gps"
+        element={
+          <ProtectedRouteWithLayout>
+            <GpsTrackingManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/fuel"
+        element={
+          <ProtectedRouteWithLayout>
+            <FuelManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/maintenance"
+        element={
+          <ProtectedRouteWithLayout>
+            <MaintenanceManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/documents"
+        element={
+          <ProtectedRouteWithLayout>
+            <DocumentManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/fees"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportFeeManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/complaints"
+        element={
+          <ProtectedRouteWithLayout>
+            <ComplaintManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/notifications"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportPlaceholder />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/transport/reports"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportPlaceholder />
           </ProtectedRouteWithLayout>
         }
       />
