@@ -42,6 +42,22 @@ import AllocationManager from './components/AllocationManager';
 import TransportAttendanceManager from './components/TransportAttendanceManager';
 import GpsTrackingManager from './components/GpsTrackingManager';
 import TransportFeeManager from './components/TransportFeeManager';
+import HostelPlaceholder from './components/HostelPlaceholder';
+import HostelAdmissionManager from './components/HostelAdmissionManager';
+import HostelAllocationManager from './components/HostelAllocationManager';
+import HostelMessManager from './components/HostelMessManager';
+import OutpassManager from './components/OutpassManager';
+import HostelComplaintManager from './components/HostelComplaintManager';
+import HostelInventoryManager from './components/HostelInventoryManager';
+import HostelVisitorManager from './components/HostelVisitorManager';
+import HostelStaffManager from './components/HostelStaffManager';
+import HostelDisciplineManager from './components/HostelDisciplineManager';
+import HostelHealthManager from './components/HostelHealthManager';
+import HostelPortalManager from './components/HostelPortalManager';
+import HostelAlertsManager from './components/HostelAlertsManager';
+import HostelAttendanceManager from './components/HostelAttendanceManager';
+import HostelFeeManager from './components/HostelFeeManager';
+import HostelRoomBedManager from './components/HostelRoomBedManager';
 
 
 
@@ -656,6 +672,149 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <TransportPlaceholder />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/hostel"
+        element={<Navigate to="/hostel/dashboard" replace />}
+      />
+
+      <Route
+        path="/hostel/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelPlaceholder />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      <Route
+        path="/hostel/admission"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelAdmissionManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/allocation"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelRoomBedManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/fees"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelFeeManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/attendance"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelAttendanceManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/mess"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelMessManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/leaves"
+        element={
+          <ProtectedRouteWithLayout>
+            <OutpassManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/complaints"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelComplaintManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/inventory"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelInventoryManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/visitors"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelVisitorManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/staff"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelStaffManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/rules"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelDisciplineManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/medical"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelHealthManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/portal"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelPortalManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelAlertsManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/reports"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelPlaceholder />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/rbac"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelPlaceholder />
           </ProtectedRouteWithLayout>
         }
       />
