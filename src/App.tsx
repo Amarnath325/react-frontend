@@ -58,6 +58,27 @@ import HostelAlertsManager from './components/HostelAlertsManager';
 import HostelAttendanceManager from './components/HostelAttendanceManager';
 import HostelFeeManager from './components/HostelFeeManager';
 import HostelRoomBedManager from './components/HostelRoomBedManager';
+import CommunicationPlaceholder from './components/CommunicationPlaceholder';
+import InternalMessagingManager from './components/InternalMessagingManager';
+import AnnouncementsManager from './components/AnnouncementsManager';
+import ParentTeacherHub from './components/ParentTeacherHub';
+import SMSEmailGateway from './components/SMSEmailGateway';
+import PushNotificationCenter from './components/PushNotificationCenter';
+import HomeworkAlertManager from './components/HomeworkAlertManager';
+import ExamResultAnnouncer from './components/ExamResultAnnouncer';
+import AttendanceAlertManager from './components/AttendanceAlertManager';
+import TimetableAlertManager from './components/TimetableAlertManager';
+import CircularBoard from './components/CircularBoard';
+import EventCalendarNotifications from './components/EventCalendarNotifications';
+import FeeReminderManager from './components/FeeReminderManager';
+import ComplaintGrievanceDesk from './components/ComplaintGrievanceDesk';
+import StaffHRCommunicationHub from './components/StaffHRCommunicationHub';
+import DiscussionForums from './components/DiscussionForums';
+import PollsSurveys from './components/PollsSurveys';
+import EmergencyBroadcast from './components/EmergencyBroadcast';
+import AlumniNetworkLinker from './components/AlumniNetworkLinker';
+import MessageDeliveryAnalytics from './components/MessageDeliveryAnalytics';
+import CommunicationAuditTrails from './components/CommunicationAuditTrails';
 
 
 
@@ -820,25 +841,170 @@ function AppContent() {
       />
       
       <Route
-        path="/communication/notices"
+        path="/communication/internal-messaging"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Send Notices</h1>
-              <p className="text-gray-600">Send notices to students and parents</p>
-            </div>
+            <InternalMessagingManager />
           </ProtectedRouteWithLayout>
         }
       />
-      
       <Route
-        path="/communication/events"
+        path="/communication/announcements"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">Events Calendar</h1>
-              <p className="text-gray-600">Manage school events</p>
-            </div>
+            <AnnouncementsManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/parent-teacher"
+        element={
+          <ProtectedRouteWithLayout>
+            <ParentTeacherHub />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/gateway"
+        element={
+          <ProtectedRouteWithLayout>
+            <SMSEmailGateway />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/push-notifications"
+        element={
+          <ProtectedRouteWithLayout>
+            <PushNotificationCenter />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/homework-alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <HomeworkAlertManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/exam-alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <ExamResultAnnouncer />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/attendance-alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <AttendanceAlertManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/timetable-alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <TimetableAlertManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/circulars"
+        element={
+          <ProtectedRouteWithLayout>
+            <CircularBoard />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/event-alerts"
+        element={
+          <ProtectedRouteWithLayout>
+            <EventCalendarNotifications />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/fee-reminders"
+        element={
+          <ProtectedRouteWithLayout>
+            <FeeReminderManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/complaints-grievances"
+        element={
+          <ProtectedRouteWithLayout>
+            <ComplaintGrievanceDesk />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/staff-chat"
+        element={
+          <ProtectedRouteWithLayout>
+            <StaffHRCommunicationHub />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/forums"
+        element={
+          <ProtectedRouteWithLayout>
+            <DiscussionForums />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/polls"
+        element={
+          <ProtectedRouteWithLayout>
+            <PollsSurveys />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/emergency"
+        element={
+          <ProtectedRouteWithLayout>
+            <EmergencyBroadcast />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/alumni"
+        element={
+          <ProtectedRouteWithLayout>
+            <AlumniNetworkLinker />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/delivery-reports"
+        element={
+          <ProtectedRouteWithLayout>
+            <MessageDeliveryAnalytics />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/analytics"
+        element={
+          <ProtectedRouteWithLayout>
+            <MessageDeliveryAnalytics />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/communication/logs"
+        element={
+          <ProtectedRouteWithLayout>
+            <CommunicationAuditTrails />
           </ProtectedRouteWithLayout>
         }
       />
