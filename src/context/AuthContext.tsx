@@ -15,6 +15,8 @@ interface User {
   email: string;
   user_type: string;
   school_id: number | null;
+  permissions?: string[];
+  roles?: string[];
 }
 
 interface AuthContextType {

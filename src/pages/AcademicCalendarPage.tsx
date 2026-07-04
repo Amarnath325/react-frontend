@@ -1,5 +1,5 @@
 import React from 'react';
-import AcademicYearManager from '../components/AcademicYearManager';
+import AcademicYearManager from '../components/Academic/AcademicYearManager';
 
 const AcademicCalendarPage: React.FC = () => {
   return (

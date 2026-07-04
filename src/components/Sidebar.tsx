@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { checkUserPermission } from '../utils/permissionHelpers';
 
 interface MenuItem {
   menu_id: number;
@@ -12,6 +13,220 @@ interface MenuItem {
   menu_sequence: number;
   children?: MenuItem[];
 }
+
+const routePermissionMap: { [key: string]: string } = {
+  // Student Management
+  '/students/dashboard': 'view_dashboard',
+  '/students/admission': 'create_students',
+  '/students/registration': 'create_students',
+  '/students/profile': 'edit_students',
+  '/students/documents': 'edit_students',
+  '/students/parents': 'view_students',
+  '/students/categories': 'view_students',
+  '/students/id-cards': 'view_students',
+  '/students/enrollment': 'create_students',
+  '/students/allocation': 'create_students',
+  '/students/promotion': 'promote_students',
+  '/students/transfer': 'promote_students',
+  '/students/attendance': 'view_attendance',
+  '/students/leaves': 'manage_student_leaves',
+  '/students/medical': 'view_medical_records',
+  '/students/discipline': 'view_students',
+  '/students/activities': 'view_students',
+  '/students/certificates': 'view_students',
+  '/students/feedback': 'view_students',
+  '/students/communication': 'send_messages',
+  '/students/transport': 'view_transport',
+  '/students/hostel': 'view_hostel',
+  '/students/library': 'view_library',
+  '/students/fees': 'view_finance',
+  '/students/exams': 'view_exams',
+  '/students/reports': 'view_students',
+  '/students/alumni': 'view_students',
+  
+  // Attendance Management
+  '/attendance/dashboard': 'view_attendance',
+  '/attendance/config': 'manage_weekly_off',
+  '/attendance/students': 'take_attendance',
+  '/attendance/teachers': 'view_attendance',
+  '/attendance/staff': 'view_attendance',
+  '/attendance/daily-entry': 'take_attendance',
+  '/attendance/period-wise': 'take_attendance',
+  '/attendance/biometric': 'take_attendance',
+  '/attendance/rfid': 'take_attendance',
+  '/attendance/face': 'take_attendance',
+  '/attendance/mobile': 'take_attendance',
+  '/attendance/approval': 'approve_leaves',
+  '/attendance/leaves': 'approve_leaves',
+  '/attendance/holidays': 'manage_weekly_off',
+  '/attendance/weekoff': 'manage_weekly_off',
+  '/attendance/correction': 'correct_attendance',
+  '/attendance/late-coming': 'correct_attendance',
+  '/attendance/absent': 'view_attendance',
+  '/attendance/notifications': 'send_messages',
+  '/attendance/reports': 'view_attendance',
+  '/attendance/analytics': 'view_attendance',
+
+  // Teacher & Staff Management
+  '/staff/dashboard': 'view_staff',
+  '/staff/employees': 'view_staff',
+  '/staff/teachers': 'view_staff',
+  '/staff/non-teaching': 'view_staff',
+  '/staff/departments': 'view_staff',
+  '/staff/designations': 'view_staff',
+  '/staff/profiles': 'view_staff',
+  '/staff/documents': 'view_staff',
+  '/staff/qualifications': 'view_staff',
+  '/staff/experience': 'view_staff',
+  '/staff/joining': 'view_staff',
+  '/staff/transfers': 'view_staff',
+  '/staff/exits': 'view_staff',
+  '/staff/class-teacher': 'allocate_class_teacher',
+  '/staff/subject-allocations': 'allocate_subjects',
+  '/staff/timetable': 'manage_workload',
+  '/staff/attendance': 'view_attendance',
+  '/staff/leaves': 'approve_leaves',
+  '/staff/substitutes': 'allocate_subjects',
+  '/staff/workload': 'manage_workload',
+  '/staff/performance': 'view_staff',
+  '/staff/training': 'view_staff',
+  '/staff/payroll': 'view_finance',
+  '/staff/communication': 'send_messages',
+  '/staff/grievances': 'view_staff',
+  '/staff/id-cards': 'view_staff',
+  '/staff/reports': 'view_staff',
+
+  // Academic & Timetable
+  '/academic/classes': 'manage_classes',
+  '/academic/subjects': 'manage_subjects',
+  '/academic/timetable': 'generate_timetable',
+  '/academic/calendar': 'manage_weekly_off',
+  '/academic/class-teacher': 'allocate_class_teacher',
+  '/academic/holidays': 'manage_weekly_off',
+  '/academic/weekoff': 'manage_weekly_off',
+  '/academic/sessions': 'manage_classes',
+  '/academic/departments': 'manage_classes',
+  '/academic/teacher-allocations': 'allocate_subjects',
+  '/academic/syllabus': 'manage_syllabus',
+  '/academic/lesson-plans': 'manage_syllabus',
+  '/academic/study-materials': 'manage_syllabus',
+  '/academic/homework': 'manage_homework',
+  '/academic/assignments': 'manage_homework',
+  '/academic/reports': 'manage_classes',
+
+  // Examinations & Results
+  '/exams/dashboard': 'view_exams',
+  '/exams/setup': 'manage_exams',
+  '/exams/subjects': 'manage_exams',
+  '/exams/seating': 'manage_seating',
+  '/exams/invigilators': 'manage_exams',
+  '/exams/marks': 'enter_marks',
+  '/exams/results': 'process_results',
+  '/exams/certificates': 'print_report_cards',
+  '/exams/reports': 'print_report_cards',
+  '/exams/re-exams': 'manage_exams',
+
+  // Fee & Finance
+  '/fees/dashboard': 'view_finance',
+  '/fees/setup': 'setup_fees',
+  '/fees/head': 'setup_fees',
+  '/fees/structure': 'setup_fees',
+  '/fees/class-wise': 'setup_fees',
+  '/fees/allocation': 'allocate_fees',
+  '/fees/collection': 'collect_fees',
+  '/fees/payments': 'collect_fees',
+  '/fees/receipts': 'collect_fees',
+  '/fees/discounts': 'setup_fees',
+  '/fees/scholarships': 'setup_fees',
+  '/fees/fines': 'collect_fees',
+  '/fees/installments': 'setup_fees',
+  '/fees/refunds': 'manage_refunds',
+  '/fees/dues': 'collect_fees',
+  '/fees/transport': 'collect_fees',
+  '/fees/hostel': 'collect_fees',
+  '/fees/income': 'view_finance',
+  '/fees/expenses': 'view_finance',
+  '/fees/vendor': 'view_finance',
+  '/fees/accounts': 'view_finance',
+  '/fees/banks': 'view_finance',
+  '/fees/cash-book': 'view_finance',
+  '/fees/budgets': 'view_finance',
+  '/fees/reports': 'view_finance_reports',
+
+  // Library
+  '/library/dashboard': 'view_library',
+  '/library/settings': 'manage_library_settings',
+  '/library/categories': 'manage_books',
+  '/library/sub-categories': 'manage_books',
+  '/library/authors-publishers': 'manage_books',
+  '/library/books': 'manage_books',
+  '/library/racks-shelves': 'manage_library_settings',
+  '/library/members': 'issue_return_books',
+  '/library/issues-returns': 'issue_return_books',
+  '/library/reservations': 'issue_return_books',
+  '/library/fines': 'collect_fines',
+
+  // Transport
+  '/transport/dashboard': 'view_transport',
+  '/transport/vehicles': 'manage_vehicles',
+  '/transport/vehicle-types': 'manage_vehicles',
+  '/transport/drivers': 'manage_drivers',
+  '/transport/routes': 'manage_routes',
+  '/transport/stops': 'manage_routes',
+  '/transport/trips': 'view_transport',
+  '/transport/fuel-logs': 'manage_vehicles',
+  '/transport/complaints': 'view_transport',
+  '/transport/documents': 'manage_vehicles',
+  '/transport/maintenance': 'manage_vehicles',
+  '/transport/allocation': 'allocate_transport',
+  '/transport/attendance': 'view_transport',
+  '/transport/gps': 'track_gps',
+  '/transport/fees': 'manage_routes',
+
+  // Hostel
+  '/hostel/dashboard': 'view_hostel',
+  '/hostel/admissions': 'manage_hostel_admissions',
+  '/hostel/rooms-beds': 'manage_rooms',
+  '/hostel/mess': 'manage_mess',
+  '/hostel/outpasses': 'issue_outpass',
+  '/hostel/complaints': 'view_hostel',
+  '/hostel/inventories': 'view_hostel',
+  '/hostel/visitors': 'view_hostel',
+  '/hostel/staff': 'view_hostel',
+  '/hostel/discipline': 'view_hostel',
+  '/hostel/health': 'view_hostel',
+  '/hostel/portal': 'view_hostel',
+  '/hostel/alerts': 'view_hostel',
+  '/hostel/attendance': 'view_hostel',
+  '/hostel/fees': 'view_hostel',
+
+  // Communication
+  '/communication/messages': 'send_messages',
+  '/communication/announcements': 'send_announcements',
+  '/communication/parent-teacher': 'send_messages',
+  '/communication/sms-email': 'send_sms_email',
+  '/communication/push-notifications': 'send_sms_email',
+  '/communication/homework-alerts': 'send_sms_email',
+  '/communication/exam-results': 'send_sms_email',
+  '/communication/attendance-alerts': 'send_sms_email',
+  '/communication/timetable-alerts': 'send_sms_email',
+  '/communication/circulars': 'send_announcements',
+  '/communication/events': 'send_announcements',
+  '/communication/fee-reminders': 'send_sms_email',
+  '/communication/complaints': 'send_messages',
+  '/communication/staff-communication': 'send_messages',
+  '/communication/discussions': 'send_messages',
+  '/communication/polls': 'send_announcements',
+  '/communication/emergency': 'send_sms_email',
+  '/communication/alumni': 'send_messages',
+  '/communication/analytics': 'send_sms_email',
+  '/communication/audit-trails': 'send_sms_email',
+
+  // Admin & System Configuration
+  '/admin/settings': 'manage_library_settings',
+  '/admin/users': 'assign_user_roles',
+  '/admin/roles': 'view_roles',
+};
 
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
@@ -42,17 +257,41 @@ const Sidebar: React.FC = () => {
     }
   }, [location.pathname, menus]);
 
+  const filterMenusByPermissions = (menuList: MenuItem[]): MenuItem[] => {
+    return menuList
+      .map(menu => {
+        if (menu.children && menu.children.length > 0) {
+          const filteredChildren = menu.children.filter(child => {
+            const requiredPermission = routePermissionMap[child.menu_route];
+            if (!requiredPermission) return true;
+            return checkUserPermission(user as any, requiredPermission);
+          });
+          return { ...menu, children: filteredChildren };
+        }
+        return menu;
+      })
+      .filter(menu => {
+        if (menu.children && menu.children.length > 0) {
+          return true;
+        }
+        const requiredPermission = routePermissionMap[menu.menu_route];
+        if (!requiredPermission) return true;
+        return checkUserPermission(user as any, requiredPermission);
+      });
+  };
+
   const fetchMenus = async () => {
     try {
       const response = await api.get('/menus');
       if (response.data.success) {
         const menusData = buildMenuHierarchy(response.data.data);
-        setMenus(menusData);
+        const filteredMenus = filterMenusByPermissions(menusData);
+        setMenus(filteredMenus);
         
         // Initial auto expand of active route category or fallback to first item
         const currentPath = window.location.pathname;
         const activeParentIds: number[] = [];
-        menusData.forEach(menu => {
+        filteredMenus.forEach(menu => {
           if (menu.children && menu.children.some(child => currentPath === child.menu_route)) {
             activeParentIds.push(menu.menu_id);
           }
@@ -60,8 +299,8 @@ const Sidebar: React.FC = () => {
 
         if (activeParentIds.length > 0) {
           setExpandedMenus(activeParentIds);
-        } else if (menusData.length > 0) {
-          setExpandedMenus([menusData[0].menu_id]);
+        } else if (filteredMenus.length > 0) {
+          setExpandedMenus([filteredMenus[0].menu_id]);
         }
       }
     } catch (error) {

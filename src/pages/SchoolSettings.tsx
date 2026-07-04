@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-import AcademicYearManager from '../components/AcademicYearManager';
+import AcademicYearManager from '../components/Academic/AcademicYearManager';
 import FeeStructureManager from '../components/FeeStructureManager';
-import ExaminationManager from '../components/ExaminationManager';
-import DepartmentManager from '../components/DepartmentManager';
+import ExaminationManager from '../components/Examination/ExaminationManager';
+import DepartmentManager from '../components/Academic/DepartmentManager';
 
 interface SchoolProfile {
   // Basic Information
