@@ -5,6 +5,7 @@ import {
   BookOpen, BarChart3, Clock, ArrowUpRight, ArrowDownRight,
   GraduationCap, AlertCircle, CheckCircle2, XCircle, RefreshCw,
   ChevronRight, Award, Target, Activity, Layers,
+  UserPlus, Heart, Building2,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -60,6 +61,53 @@ interface WeeklyAttendance {
   absent: number;
 }
 
+interface ModulesStats {
+  admissions: {
+    total_registrations: number;
+    pending_registrations: number;
+  };
+  documents: {
+    total_students_with_docs: number;
+  };
+  leaves: {
+    pending_leaves: number;
+  };
+  discipline: {
+    active_warnings: number;
+  };
+  medical: {
+    total_records: number;
+  };
+  activities: {
+    active_participants: number;
+  };
+  certificates: {
+    issued_certificates: number;
+  };
+  feedback: {
+    total_feedbacks: number;
+  };
+  communication: {
+    sent_messages: number;
+  };
+  transport: {
+    allocated_students: number;
+  };
+  hostel: {
+    allocated_boarders: number;
+  };
+  library: {
+    library_members: number;
+    active_book_issues: number;
+  };
+  alumni: {
+    total_alumni: number;
+  };
+  promotions: {
+    promoted_this_year: number;
+  };
+}
+
 interface DashboardData {
   summary: Summary;
   fees: Fees;
@@ -67,6 +115,7 @@ interface DashboardData {
   recent_students: RecentStudent[];
   class_distribution: ClassDist[];
   weekly_attendance: WeeklyAttendance[];
+  modules_stats?: ModulesStats;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -275,6 +324,22 @@ const getMockData = (): DashboardData => ({
     { day: 'Sat', date: '', present: 640, absent: 120 },
     { day: 'Sun', date: '', present: 0, absent: 0 },
   ],
+  modules_stats: {
+    admissions: { total_registrations: 148, pending_registrations: 5 },
+    documents: { total_students_with_docs: 1180 },
+    leaves: { pending_leaves: 12 },
+    discipline: { active_warnings: 2 },
+    medical: { total_records: 245 },
+    activities: { active_participants: 84 },
+    certificates: { issued_certificates: 195 },
+    feedback: { total_feedbacks: 42 },
+    communication: { sent_messages: 1250 },
+    transport: { allocated_students: 450 },
+    hostel: { allocated_boarders: 120 },
+    library: { library_members: 850, active_book_issues: 48 },
+    alumni: { total_alumni: 380 },
+    promotions: { promoted_this_year: 340 }
+  }
 });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -351,6 +416,147 @@ const StudentDashboard: React.FC = () => {
         <KpiCard label="New This Month" value={fmt(s?.new_this_month ?? 0)} sub="new admissions" icon={<TrendingUp size={20} />} color="violet" trend={12} />
         <KpiCard label="Fee Collected" value={fmtRupee(fees?.collected_this_month ?? 0)} sub="this month" icon={<IndianRupee size={20} />} color="amber" trend={8.3} />
         <KpiCard label="Fee Pending" value={fmtRupee(fees?.pending_total ?? 0)} sub={`${fees?.defaulters ?? 0} defaulters`} icon={<AlertCircle size={20} />} color="orange" trend={fees?.defaulters ?? 0} invertTrend />
+      </div>
+
+      {/* Student Modules Directory */}
+      <div className="sdb-modules-title-wrap">
+        <Target size={20} className="sdb-title-icon" />
+        <h2 className="sdb-modules-title">Student Modules Hub</h2>
+      </div>
+
+      <div className="sdb-modules-grid">
+        {/* Card 1: Admissions & Profiles */}
+        <div className="sdb-mod-card" style={{ '--bg-start': '#6366f1', '--bg-end': '#4f46e5' } as React.CSSProperties}>
+          <div className="sdb-mod-head">
+            <div className="sdb-mod-icon"><UserPlus size={16} /></div>
+            <h3 className="sdb-mod-title">Admissions &amp; Profiles</h3>
+          </div>
+          <div className="sdb-mod-body">
+            <button className="sdb-mod-link" onClick={() => navigate('/students/admission')}>
+              <span>Admission Gate</span>
+              <span className="sdb-mod-badge sdb-mod-badge-amber">Pending: {data?.modules_stats?.admissions?.pending_registrations ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/registration')}>
+              <span>Registration Desk</span>
+              <span className="sdb-mod-badge sdb-mod-badge-blue">Total: {data?.modules_stats?.admissions?.total_registrations ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/enrollment')}>
+              <span>Enrollment Registry</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/profile')}>
+              <span>Profile Management</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/documents')}>
+              <span>Document Check</span>
+              <span className="sdb-mod-badge sdb-mod-badge-emerald">Files: {data?.modules_stats?.documents?.total_students_with_docs ?? 0}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 2: Attendance & Welfare */}
+        <div className="sdb-mod-card" style={{ '--bg-start': '#10b981', '--bg-end': '#059669' } as React.CSSProperties}>
+          <div className="sdb-mod-head">
+            <div className="sdb-mod-icon"><Heart size={16} /></div>
+            <h3 className="sdb-mod-title">Attendance &amp; Welfare</h3>
+          </div>
+          <div className="sdb-mod-body">
+            <button className="sdb-mod-link" onClick={() => navigate('/students/attendance')}>
+              <span>Attendance Logs</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/leaves')}>
+              <span>Leave Applications</span>
+              <span className="sdb-mod-badge sdb-mod-badge-amber">Awaiting: {data?.modules_stats?.leaves?.pending_leaves ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/medical')}>
+              <span>Medical Records</span>
+              <span className="sdb-mod-badge sdb-mod-badge-blue">Logs: {data?.modules_stats?.medical?.total_records ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/discipline')}>
+              <span>Discipline Desk</span>
+              { (data?.modules_stats?.discipline?.active_warnings ?? 0) > 0 && (
+                <span className="sdb-mod-badge sdb-mod-badge-rose">Warnings: {data?.modules_stats?.discipline?.active_warnings}</span>
+              )}
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/activities')}>
+              <span>Activities &amp; Clubs</span>
+              <span className="sdb-mod-badge sdb-mod-badge-violet">Active: {data?.modules_stats?.activities?.active_participants ?? 0}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 3: Campus Services */}
+        <div className="sdb-mod-card" style={{ '--bg-start': '#f59e0b', '--bg-end': '#d97706' } as React.CSSProperties}>
+          <div className="sdb-mod-head">
+            <div className="sdb-mod-icon"><Building2 size={16} /></div>
+            <h3 className="sdb-mod-title">Campus Services</h3>
+          </div>
+          <div className="sdb-mod-body">
+            <button className="sdb-mod-link" onClick={() => navigate('/students/hostel')}>
+              <span>Hostel Boarding</span>
+              <span className="sdb-mod-badge sdb-mod-badge-blue">Beds: {data?.modules_stats?.hostel?.allocated_boarders ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/transport')}>
+              <span>Transport Routes</span>
+              <span className="sdb-mod-badge sdb-mod-badge-emerald">Riders: {data?.modules_stats?.transport?.allocated_students ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/library')}>
+              <span>Library Member</span>
+              <span className="sdb-mod-badge sdb-mod-badge-violet">Issued: {data?.modules_stats?.library?.active_book_issues ?? 0}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 4: Academic & Logs */}
+        <div className="sdb-mod-card" style={{ '--bg-start': '#3b82f6', '--bg-end': '#2563eb' } as React.CSSProperties}>
+          <div className="sdb-mod-head">
+            <div className="sdb-mod-icon"><BookOpen size={16} /></div>
+            <h3 className="sdb-mod-title">Academic &amp; Logs</h3>
+          </div>
+          <div className="sdb-mod-body">
+            <button className="sdb-mod-link" onClick={() => navigate('/students/exams')}>
+              <span>Exam Records</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/promotion')}>
+              <span>Promotion Desk</span>
+              <span className="sdb-mod-badge sdb-mod-badge-emerald">Promoted: {data?.modules_stats?.promotions?.promoted_this_year ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/transfer')}>
+              <span>TC &amp; Transfers</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/certificates')}>
+              <span>Certificates</span>
+              <span className="sdb-mod-badge sdb-mod-badge-blue">Issued: {data?.modules_stats?.certificates?.issued_certificates ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/reports')}>
+              <span>Reports &amp; Stats</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 5: Operations & Alumni */}
+        <div className="sdb-mod-card" style={{ '--bg-start': '#ec4899', '--bg-end': '#db2777' } as React.CSSProperties}>
+          <div className="sdb-mod-head">
+            <div className="sdb-mod-icon"><GraduationCap size={16} /></div>
+            <h3 className="sdb-mod-title">Operations &amp; Alumni</h3>
+          </div>
+          <div className="sdb-mod-body">
+            <button className="sdb-mod-link" onClick={() => navigate('/students/alumni')}>
+              <span>Alumni Directory</span>
+              <span className="sdb-mod-badge sdb-mod-badge-emerald">Alumni: {data?.modules_stats?.alumni?.total_alumni ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/parents')}>
+              <span>Parent Link desk</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/feedback')}>
+              <span>Feedback Portal</span>
+              <span className="sdb-mod-badge sdb-mod-badge-blue">Reviews: {data?.modules_stats?.feedback?.total_feedbacks ?? 0}</span>
+            </button>
+            <button className="sdb-mod-link" onClick={() => navigate('/students/communication')}>
+              <span>Communication</span>
+              <span className="sdb-mod-badge sdb-mod-badge-slate">Sent: {data?.modules_stats?.communication?.sent_messages ?? 0}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Main Grid */}
@@ -660,6 +866,26 @@ const styles = `
 .sdb-skel-header{height:48px;margin-bottom:20px;}
 .sdb-skel-kpi{height:110px;}
 .sdb-skel-card{height:200px;}
+.sdb-modules-title-wrap{display:flex;align-items:center;gap:8px;margin:24px 0 16px;}
+.sdb-modules-title{font-size:16px;font-weight:800;color:#0f172a;margin:0;}
+.sdb-modules-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
+@media(max-width:1200px){.sdb-modules-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.sdb-modules-grid{grid-template-columns:repeat(1,1fr);}}
+.sdb-mod-card{background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.sdb-mod-card:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.08);}
+.sdb-mod-head{padding:16px;background:linear-gradient(135deg,var(--bg-start),var(--bg-end));color:#fff;display:flex;align-items:center;gap:10px;}
+.sdb-mod-icon{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+.sdb-mod-title{font-size:13px;font-weight:800;margin:0;letter-spacing:.02em;}
+.sdb-mod-body{padding:12px 8px;display:flex;flex-direction:column;gap:4px;flex:1;}
+.sdb-mod-link{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;color:#475569;text-decoration:none;font-size:11.5px;font-weight:600;transition:all .15s ease;background:transparent;border:none;width:100%;text-align:left;cursor:pointer;}
+.sdb-mod-link:hover{background:#f8fafc;color:#6366f1;padding-left:16px;}
+.sdb-mod-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;}
+.sdb-mod-badge-blue{background:#e0f2fe;color:#0369a1;}
+.sdb-mod-badge-emerald{background:#dcfce7;color:#15803d;}
+.sdb-mod-badge-amber{background:#fef3c7;color:#b45309;}
+.sdb-mod-badge-rose{background:#ffe4e6;color:#be123c;}
+.sdb-mod-badge-violet{background:#f3e8ff;color:#6b21a8;}
+.sdb-mod-badge-slate{background:#f1f5f9;color:#475569;}
 `;
 
 export default StudentDashboard;

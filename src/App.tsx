@@ -15,6 +15,7 @@ import StudentDashboard from './pages/StudentManager/StudentDashboard';
 import StudentAdmission from './pages/StudentManager/StudentAdmission';
 import StudentAdmissionForm from './pages/StudentManager/StudentAdmissionForm';
 import StudentRegistrationSub from './pages/StudentManager/StudentRegistration';
+import StudentRegistrationForm from './pages/StudentManager/StudentRegistrationForm';
 import StudentProfileManagement from './pages/StudentManager/StudentProfileManagement';
 import StudentDocumentManagement from './pages/StudentManager/StudentDocumentManagement';
 import ParentGuardianManagement from './pages/StudentManager/ParentGuardianManagement';
@@ -379,6 +380,22 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <StudentRegistrationSub />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/students/registration/new"
+        element={
+          <ProtectedRouteWithLayout>
+            <StudentRegistrationForm />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/students/registration/edit/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <StudentRegistrationForm />
           </ProtectedRouteWithLayout>
         }
       />

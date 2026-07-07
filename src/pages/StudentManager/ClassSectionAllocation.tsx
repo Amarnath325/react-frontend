@@ -1,6 +1,6 @@
 import React from 'react';
-import StudentHub from './StudentHub';
+import SectionManager from '../../components/Academic/SectionManager';
 
 export default function ClassSectionAllocation() {
-  return <StudentHub />;
+  return <SectionManager />;
 }
