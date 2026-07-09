@@ -1,6 +1,6 @@
 import React from 'react';
-import TeacherStaffHub from './TeacherStaffHub';
+import TeacherDashboard from './TeacherDashboard';
 
 export default function Dashboard() {
-  return <TeacherStaffHub />;
+  return <TeacherDashboard />;
 }
