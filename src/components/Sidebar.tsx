@@ -185,10 +185,11 @@ const routePermissionMap: { [key: string]: string } = {
 
   // Hostel
   '/hostel/dashboard': 'view_hostel',
-  '/hostel/admission': 'manage_hostel_admissions',
-  '/hostel/allocation': 'manage_rooms',
-  '/hostel/mess': 'manage_mess',
-  '/hostel/outpasses': 'issue_outpass',
+  '/hostel/admission': 'view_hostel',
+  '/hostel/allocation': 'view_hostel',
+  '/hostel/mess': 'view_hostel',
+  '/hostel/outpasses': 'view_hostel',
+  '/hostel/leaves': 'view_hostel',
   '/hostel/complaints': 'view_hostel',
   '/hostel/inventory': 'view_hostel',
   '/hostel/visitors': 'view_hostel',
@@ -199,6 +200,8 @@ const routePermissionMap: { [key: string]: string } = {
   '/hostel/alerts': 'view_hostel',
   '/hostel/attendance': 'view_hostel',
   '/hostel/fees': 'view_hostel',
+  '/hostel/reports': 'view_hostel',
+  '/hostel/rbac': 'view_hostel',
 
   // Communication
   '/communication/messages': 'send_messages',

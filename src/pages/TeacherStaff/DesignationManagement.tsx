@@ -1,6 +1,6 @@
 import React from 'react';
-import TeacherStaffHub from './TeacherStaffHub';
+import DesignationManager from '../../components/Academic/DesignationManager';
 
 export default function DesignationManagement() {
-  return <TeacherStaffHub />;
+  return <DesignationManager />;
 }

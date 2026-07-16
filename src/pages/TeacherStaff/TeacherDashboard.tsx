@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -85,9 +85,9 @@ const SAMPLE_DATA: DashboardData = {
 };
 
 /* ────────────────────────────────────────────────────────────────
-   CHART HELPERS
+   CHART HELPERS (LIGHT THEME COLORS)
 ──────────────────────────────────────────────────────────────── */
-const BAR_COLORS = ['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#818cf8','#7c3aed','#5b21b6','#4338ca'];
+const BAR_COLORS = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#1e40af','#0284c7','#0ea5e9'];
 
 function MiniBarChart({ data, labelKey, valueKey }: { data: any[]; labelKey: string; valueKey: string }) {
   const max = Math.max(...data.map((d) => d[valueKey]), 1);
@@ -106,14 +106,14 @@ function MiniBarChart({ data, labelKey, valueKey }: { data: any[]; labelKey: str
   );
 }
 
-function ExperienceDonut({ dist }: { dist: Record<string, number> }) {
+function DonutChart({ dist }: { dist: Record<string, number> }) {
   const entries = Object.entries(dist);
   const total = entries.reduce((s, [, v]) => s + v, 0) || 1;
   const r = 40; const circ = 2 * Math.PI * r;
   let cumOffset = 0;
   const segments = entries.map(([label, val], i) => {
     const dashLen = (val / total) * circ;
-    const seg = { label, val, dashLen, cumOffset, color: BAR_COLORS[i] };
+    const seg = { label, val, dashLen, cumOffset, color: BAR_COLORS[i % BAR_COLORS.length] };
     cumOffset += dashLen;
     return seg;
   });
@@ -125,7 +125,7 @@ function ExperienceDonut({ dist }: { dist: Record<string, number> }) {
             strokeDasharray={`${s.dashLen} ${circ}`} strokeDashoffset={-s.cumOffset}
             transform="rotate(-90 50 50)" />
         ))}
-        <text x="50" y="50" textAnchor="middle" fill="#e2e8f0" fontSize="11" fontWeight="800" dy=".35em">{total}</text>
+        <text x="50" y="50" textAnchor="middle" fill="#0f172a" fontSize="11" fontWeight="800" dy=".35em">{total}</text>
         <text x="50" y="62" textAnchor="middle" fill="#64748b" fontSize="5.5">Teachers</text>
       </svg>
       <div className="tdb-donut-legend">
@@ -148,7 +148,7 @@ function SparklineBar({ trend }: { trend: JoiningTrend[] }) {
       {trend.map((t, i) => (
         <div key={i} className="tdb-spark-col">
           <div className="tdb-spark-bar-wrap">
-            <div className="tdb-spark-bar" style={{ height: `${Math.max((t.count / max) * 100, 5)}%` }} title={`${t.month}: ${t.count}`} />
+            <div className="tdb-spark-bar" style={{ height: `${Math.max((t.count / max) * 100, 6)}%` }} title={`${t.month}: ${t.count}`} />
           </div>
           <span className="tdb-spark-label">{t.month.slice(0, 3)}</span>
           <span className="tdb-spark-count">{t.count}</span>
@@ -159,14 +159,13 @@ function SparklineBar({ trend }: { trend: JoiningTrend[] }) {
 }
 
 /* ────────────────────────────────────────────────────────────────
-   STAT CARD
+   STAT CARD (LIGHT THEME)
 ──────────────────────────────────────────────────────────────── */
-interface StatCardProps { icon: string; label: string; value: number | string; sub?: string; accent: string; trend?: string }
-function StatCard({ icon, label, value, sub, accent, trend }: StatCardProps) {
+interface StatCardProps { icon: string; label: string; value: number | string; sub?: string; accentBg: string; accentText: string; trend?: string }
+function StatCard({ icon, label, value, sub, accentBg, accentText, trend }: StatCardProps) {
   return (
-    <div className="tdb-stat-card" style={{ '--accent': accent } as React.CSSProperties}>
-      <div className="tdb-stat-glow" />
-      <div className="tdb-stat-icon">{icon}</div>
+    <div className="tdb-stat-card">
+      <div className={`tdb-stat-icon ${accentBg} ${accentText}`}>{icon}</div>
       <div className="tdb-stat-body">
         <div className="tdb-stat-value">{value}</div>
         <div className="tdb-stat-label">{label}</div>
@@ -178,129 +177,134 @@ function StatCard({ icon, label, value, sub, accent, trend }: StatCardProps) {
 }
 
 /* ────────────────────────────────────────────────────────────────
-   CSS
+   CSS - EXACT LIGHT THEME ACCORDING TO OTHER MODULES
 ──────────────────────────────────────────────────────────────── */
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-  .tdb-root { font-family:'Inter',sans-serif; background:#0a0b0f; min-height:100vh; color:#e2e8f0; padding:24px; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  .tdb-root { font-family:'Inter',sans-serif; background:#f8fafc; min-height:100vh; color:#1e293b; padding:24px; }
 
   /* ── Header ── */
-  .tdb-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px; }
-  .tdb-header-left h1 { font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0; }
-  .tdb-header-left p  { color:#475569;font-size:.82rem;margin:5px 0 0; }
-  .tdb-header-actions { display:flex;gap:8px;flex-wrap:wrap; }
-  .tdb-btn { padding:9px 18px;border-radius:10px;border:none;cursor:pointer;font-size:.8rem;font-weight:600;font-family:inherit;transition:all .2s;display:flex;align-items:center;gap:6px; }
-  .tdb-btn-primary { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff; }
-  .tdb-btn-primary:hover { transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.4); }
-  .tdb-btn-ghost { background:rgba(255,255,255,.06);color:#cbd5e1;border:1px solid rgba(255,255,255,.1); }
-  .tdb-btn-ghost:hover { background:rgba(255,255,255,.1); }
+  .tdb-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px; }
+  .tdb-header-left h1 { font-size:1.65rem;font-weight:800;color:#0f172a;margin:0; }
+  .tdb-header-left p  { color:#64748b;font-size:.82rem;margin:4px 0 0; }
+  .tdb-header-actions { display:flex;gap:10px;flex-wrap:wrap; }
+  .tdb-btn { padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;transition:all .2s;display:flex;align-items:center;gap:6px; }
+  .tdb-btn-primary { background:#2563eb;color:#fff;box-shadow:0 1px 2px 0 rgba(0,0,0,.05); }
+  .tdb-btn-primary:hover { background:#1d4ed8; }
+  .tdb-btn-ghost { background:#fff;color:#334155;border:1px solid #cbd5e1; }
+  .tdb-btn-ghost:hover { background:#f1f5f9; }
 
   /* ── Banner ── */
-  .tdb-sample-banner { background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(251,191,36,.06));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:#fbbf24;font-size:.8rem; }
+  .tdb-sample-banner { background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:#b45309;font-size:.82rem;font-weight:500; }
 
   /* ── Stats Grid ── */
-  .tdb-stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px;margin-bottom:22px; }
-  .tdb-stat-card { position:relative;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:18px 16px;display:flex;gap:12px;align-items:flex-start;overflow:hidden;transition:transform .2s,box-shadow .25s; }
-  .tdb-stat-card:hover { transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,0,0,.5); }
-  .tdb-stat-glow { position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);border-radius:16px 16px 0 0; }
-  .tdb-stat-icon { font-size:1.5rem;width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-  .tdb-stat-value { font-size:1.6rem;font-weight:800;color:#f1f5f9;line-height:1; }
-  .tdb-stat-label { font-size:.73rem;color:#64748b;margin-top:4px;font-weight:500; }
-  .tdb-stat-sub   { font-size:.68rem;color:#475569;margin-top:2px; }
-  .tdb-stat-trend { margin-left:auto;font-size:.68rem;background:rgba(34,197,94,.12);color:#4ade80;border-radius:20px;padding:3px 8px;height:fit-content;white-space:nowrap; }
+  .tdb-stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;margin-bottom:24px; }
+  .tdb-stat-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;display:flex;gap:14px;align-items:center;box-shadow:0 1px 3px 0 rgba(0,0,0,.04);transition:all .2s; }
+  .tdb-stat-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-2px); }
+  .tdb-stat-icon { font-size:1.4rem;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .bg-blue-100 { background:#eff6ff; } .text-blue-600 { color:#2563eb; }
+  .bg-green-100{ background:#f0fdf4; } .text-green-600{ color:#16a34a; }
+  .bg-purple-100{ background:#faf5ff; } .text-purple-600{ color:#9333ea; }
+  .bg-amber-100{ background:#fffbeb; } .text-amber-600{ color:#d97706; }
+  .tdb-stat-value { font-size:1.55rem;font-weight:800;color:#0f172a;line-height:1.1; }
+  .tdb-stat-label { font-size:.76rem;color:#64748b;margin-top:4px;font-weight:600; }
+  .tdb-stat-sub   { font-size:.68rem;color:#94a3b8;margin-top:2px; }
+  .tdb-stat-trend { margin-left:auto;font-size:.68rem;background:#dcfce7;color:#166534;border-radius:20px;padding:3px 8px;font-weight:600; }
 
   /* ── Layout ── */
-  .tdb-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px; }
-  .tdb-grid-3 { display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px; }
+  .tdb-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px; }
+  .tdb-grid-3 { display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px; }
   @media(max-width:900px){.tdb-grid-2,.tdb-grid-3{grid-template-columns:1fr;}}
 
   /* ── Panel ── */
-  .tdb-panel { background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px; }
-  .tdb-panel-title { font-size:.88rem;font-weight:700;color:#e2e8f0;margin:0 0 16px;display:flex;align-items:center;justify-content:space-between;gap:8px; }
+  .tdb-panel { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 3px 0 rgba(0,0,0,.04); }
+  .tdb-panel-title { font-size:.92rem;font-weight:700;color:#0f172a;margin:0 0 16px;display:flex;align-items:center;justify-content:space-between;gap:8px; }
   .tdb-panel-title-left { display:flex;align-items:center;gap:8px; }
 
   /* ── Bar Chart ── */
-  .tdb-bar-chart { display:flex;flex-direction:column;gap:10px; }
-  .tdb-bar-row { display:grid;grid-template-columns:110px 1fr 32px;gap:8px;align-items:center; }
-  .tdb-bar-label { font-size:.7rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .tdb-bar-track { background:rgba(255,255,255,.06);border-radius:4px;height:8px;overflow:hidden; }
+  .tdb-bar-chart { display:flex;flex-direction:column;gap:12px; }
+  .tdb-bar-row { display:grid;grid-template-columns:120px 1fr 36px;gap:10px;align-items:center; }
+  .tdb-bar-label { font-size:.76rem;color:#475569;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .tdb-bar-track { background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden; }
   .tdb-bar-fill  { height:100%;border-radius:4px;transition:width .7s ease; }
-  .tdb-bar-value { font-size:.7rem;color:#64748b;text-align:right; }
+  .tdb-bar-value { font-size:.76rem;color:#64748b;font-weight:600;text-align:right; }
 
   /* ── Donut ── */
   .tdb-donut-wrap   { display:flex;gap:20px;align-items:center;flex-wrap:wrap; }
   .tdb-donut-svg    { width:120px;height:120px;flex-shrink:0; }
-  .tdb-donut-legend { flex:1;display:flex;flex-direction:column;gap:6px;min-width:120px; }
-  .tdb-legend-item  { display:flex;align-items:center;gap:6px;font-size:.7rem; }
+  .tdb-donut-legend { flex:1;display:flex;flex-direction:column;gap:8px;min-width:130px; }
+  .tdb-legend-item  { display:flex;align-items:center;gap:8px;font-size:.76rem; }
   .tdb-legend-dot   { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
-  .tdb-legend-label { color:#94a3b8;flex:1; }
-  .tdb-legend-val   { color:#e2e8f0;font-weight:600; }
+  .tdb-legend-label { color:#475569;flex:1; }
+  .tdb-legend-val   { color:#0f172a;font-weight:700; }
 
   /* ── Sparkline ── */
-  .tdb-sparkline   { display:flex;gap:8px;align-items:flex-end;height:90px;padding-bottom:4px; }
-  .tdb-spark-col   { display:flex;flex-direction:column;align-items:center;gap:2px;flex:1; }
+  .tdb-sparkline   { display:flex;gap:10px;align-items:flex-end;height:100px;padding-bottom:4px; }
+  .tdb-spark-col   { display:flex;flex-direction:column;align-items:center;gap:4px;flex:1; }
   .tdb-spark-bar-wrap{ flex:1;width:100%;display:flex;align-items:flex-end; }
-  .tdb-spark-bar   { width:100%;background:linear-gradient(180deg,#6366f1,#8b5cf6);border-radius:4px 4px 0 0;min-height:4px;transition:height .6s ease; }
-  .tdb-spark-label { font-size:.6rem;color:#475569; }
-  .tdb-spark-count { font-size:.6rem;color:#6366f1;font-weight:600; }
+  .tdb-spark-bar   { width:100%;background:#3b82f6;border-radius:4px 4px 0 0;min-height:4px;transition:height .6s ease; }
+  .tdb-spark-label { font-size:.68rem;color:#64748b;font-weight:500; }
+  .tdb-spark-count { font-size:.7rem;color:#1e40af;font-weight:700; }
 
   /* ── Timetable ── */
-  .tdb-schedule      { display:flex;flex-direction:column;gap:8px; }
-  .tdb-schedule-slot { background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;display:grid;grid-template-columns:85px 1fr;gap:10px;align-items:center;border-left:3px solid #6366f1;transition:background .2s; }
-  .tdb-schedule-slot:hover { background:rgba(255,255,255,.07); }
-  .tdb-slot-time    { font-size:.7rem;color:#8b5cf6;font-weight:700; }
-  .tdb-slot-teacher { font-size:.78rem;color:#e2e8f0;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
-  .tdb-slot-badge   { display:inline-block;background:rgba(139,92,246,.2);color:#a78bfa;border-radius:6px;padding:1px 7px;font-size:.64rem;font-weight:600; }
-  .tdb-slot-meta    { font-size:.68rem;color:#475569;margin-top:3px; }
+  .tdb-schedule      { display:flex;flex-direction:column;gap:10px; }
+  .tdb-schedule-slot { background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:85px 1fr;gap:12px;align-items:center;border-left:3px solid #2563eb;transition:background .2s; }
+  .tdb-schedule-slot:hover { background:#f1f5f9; }
+  .tdb-slot-time    { font-size:.74rem;color:#2563eb;font-weight:700; }
+  .tdb-slot-teacher { font-size:.82rem;color:#0f172a;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+  .tdb-slot-badge   { display:inline-block;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:.68rem;font-weight:600; }
+  .tdb-slot-meta    { font-size:.72rem;color:#64748b;margin-top:4px; }
 
   /* ── Exams ── */
   .tdb-exam-list { display:flex;flex-direction:column;gap:10px; }
-  .tdb-exam-card { background:rgba(255,255,255,.04);border-radius:12px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-left:3px solid;transition:background .2s; }
-  .tdb-exam-card:hover { background:rgba(255,255,255,.07); }
-  .tdb-exam-name  { font-size:.82rem;font-weight:600;color:#e2e8f0; }
-  .tdb-exam-dates { font-size:.68rem;color:#64748b;margin-top:3px; }
-  .tdb-exam-badge { border-radius:20px;padding:3px 12px;font-size:.68rem;font-weight:700;flex-shrink:0; }
-  .tdb-badge-soon     { background:rgba(239,68,68,.2);color:#f87171; }
-  .tdb-badge-upcoming { background:rgba(99,102,241,.2);color:#818cf8; }
-  .tdb-badge-active   { background:rgba(34,197,94,.2);color:#4ade80; }
+  .tdb-exam-card { background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-left:3px solid #3b82f6;transition:background .2s; }
+  .tdb-exam-card:hover { background:#f1f5f9; }
+  .tdb-exam-name  { font-size:.84rem;font-weight:600;color:#0f172a; }
+  .tdb-exam-dates { font-size:.72rem;color:#64748b;margin-top:3px; }
+  .tdb-exam-badge { border-radius:9999px;padding:3px 12px;font-size:.7rem;font-weight:700;flex-shrink:0; }
+  .tdb-badge-soon     { background:#fee2e2;color:#991b1b; }
+  .tdb-badge-upcoming { background:#eff6ff;color:#1e40af; }
+  .tdb-badge-active   { background:#dcfce7;color:#166534; }
 
-  /* ── Recent Teachers ── */
+  /* ── Recent Teachers Table ── */
   .tdb-teacher-table { width:100%;border-collapse:collapse; }
-  .tdb-teacher-table th { font-size:.68rem;color:#475569;font-weight:600;text-align:left;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap; }
-  .tdb-teacher-table td { font-size:.74rem;color:#cbd5e1;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04); }
-  .tdb-teacher-table tr:hover td { background:rgba(255,255,255,.03); }
-  .tdb-td-name   { display:flex;align-items:center;gap:8px; }
-  .tdb-avatar    { width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#fff;flex-shrink:0; }
-  .tdb-status-dot{ width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle; }
+  .tdb-teacher-table th { font-size:.72rem;color:#64748b;font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em;background:#f8fafc; }
+  .tdb-teacher-table td { font-size:.82rem;color:#334155;padding:12px;border-bottom:1px solid #f1f5f9; }
+  .tdb-teacher-table tr:hover td { background:#f8fafc; }
+  .tdb-td-name   { display:flex;align-items:center;gap:10px; }
+  .tdb-avatar    { width:34px;height:34px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0; }
+  .tdb-status-dot{ width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle; }
 
   /* ── Quick Actions ── */
-  .tdb-quick-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px;margin-bottom:20px; }
-  .tdb-qa-card  { background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .2s;text-align:center; }
-  .tdb-qa-card:hover { background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.35);transform:translateY(-2px); }
-  .tdb-qa-icon  { font-size:1.4rem; }
-  .tdb-qa-label { font-size:.68rem;color:#94a3b8;font-weight:500;line-height:1.2; }
+  .tdb-quick-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:24px; }
+  .tdb-qa-card  { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .2s;text-align:center;box-shadow:0 1px 2px 0 rgba(0,0,0,.03); }
+  .tdb-qa-card:hover { background:#eff6ff;border-color:#bfdbfe;transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,.05); }
+  .tdb-qa-icon  { font-size:1.5rem; }
+  .tdb-qa-label { font-size:.76rem;color:#334155;font-weight:600;line-height:1.3; }
 
   /* ── Tabs ── */
-  .tdb-tabs { display:flex;gap:3px;margin-bottom:18px;background:rgba(255,255,255,.04);border-radius:12px;padding:4px;width:fit-content; }
-  .tdb-tab  { padding:7px 20px;border-radius:9px;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:inherit;transition:all .2s;color:#64748b;background:transparent; }
-  .tdb-tab.active { background:rgba(99,102,241,.25);color:#818cf8; }
-  .tdb-tab:hover:not(.active){ color:#94a3b8; }
+  .tdb-tabs { display:flex;gap:6px;margin-bottom:20px;background:#f1f5f9;border-radius:10px;padding:4px;width:fit-content; }
+  .tdb-tab  { padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:.8rem;font-weight:600;font-family:inherit;transition:all .2s;color:#64748b;background:transparent; }
+  .tdb-tab.active { background:#fff;color:#2563eb;box-shadow:0 1px 2px rgba(0,0,0,.06); }
+  .tdb-tab:hover:not(.active){ color:#1e293b; }
 
   /* ── Allocation ── */
-  .tdb-alloc-list { display:flex;flex-direction:column;gap:8px; }
-  .tdb-alloc-row  { background:rgba(255,255,255,.04);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px; }
-  .tdb-alloc-name { font-size:.78rem;color:#e2e8f0;font-weight:600; }
-  .tdb-alloc-cls  { font-size:.7rem;color:#a78bfa;background:rgba(139,92,246,.15);padding:2px 10px;border-radius:20px;font-weight:600; }
+  .tdb-alloc-list { display:flex;flex-direction:column;gap:10px; }
+  .tdb-alloc-row  { background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px; }
+  .tdb-alloc-name { font-size:.82rem;color:#0f172a;font-weight:600; }
+  .tdb-alloc-cls  { font-size:.74rem;color:#7c3aed;background:#f3e8ff;padding:3px 12px;border-radius:20px;font-weight:600; }
 
   /* ── Empty / Loading ── */
-  .tdb-empty  { text-align:center;padding:32px;color:#475569;font-size:.8rem; }
+  .tdb-empty  { text-align:center;padding:40px;color:#64748b;font-size:.85rem; }
   .tdb-loader { display:flex;align-items:center;justify-content:center;min-height:60vh; }
-  .tdb-spin   { width:48px;height:48px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:tdb-spin .8s linear infinite; }
+  .tdb-spin   { width:48px;height:48px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:tdb-spin .8s linear infinite; }
   @keyframes tdb-spin{to{transform:rotate(360deg)}}
 
   /* ── Role chips ── */
-  .chip-ct { background:rgba(139,92,246,.2);color:#a78bfa;padding:2px 8px;border-radius:6px;font-size:.64rem;font-weight:600; }
-  .chip-st { background:rgba(100,116,139,.12);color:#94a3b8;padding:2px 8px;border-radius:6px;font-size:.64rem; }
+  .chip-ct { background:#f3e8ff;color:#6b21a8;padding:3px 10px;border-radius:9999px;font-size:.72rem;font-weight:600; }
+  .chip-st { background:#f1f5f9;color:#475569;padding:3px 10px;border-radius:9999px;font-size:.72rem;font-weight:500; }
+  .chip-dept{ background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:9999px;font-size:.72rem;font-weight:600; }
 `;
 
 /* ────────────────────────────────────────────────────────────────
@@ -308,43 +312,104 @@ const CSS = `
 ──────────────────────────────────────────────────────────────── */
 export default function TeacherDashboard() {
   const navigate = useNavigate();
-  const [data, setData]         = useState<DashboardData | null>(null);
   const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [usingSample, setUsingSample] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'exams'>('overview');
+  const [data, setData]         = useState<DashboardData>(SAMPLE_DATA);
+  const [isSample, setIsSample] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'teachers'>('overview');
 
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await api.get('/teachers/dashboard');
-      if (res.data.success) { setData(res.data.data); setUsingSample(false); }
-      else throw new Error(res.data.message || 'Failed');
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Network error');
-      setData(SAMPLE_DATA); setUsingSample(true);
-    } finally { setLoading(false); }
+      const [dbRes, tListRes] = await Promise.allSettled([
+        api.get('/teachers/dashboard'),
+        api.get('/school/teachers'),
+      ]);
+
+      let backendData: any = null;
+      if (dbRes.status === 'fulfilled' && dbRes.value?.data?.success) {
+        backendData = dbRes.value.data.data;
+      }
+
+      let realTeachers: RecentTeacher[] = [];
+      if (tListRes.status === 'fulfilled' && tListRes.value?.data?.success) {
+        const rawList = tListRes.value.data.data || [];
+        realTeachers = rawList.map((t: any) => ({
+          id: t.id,
+          name: `${t.user?.first_name ?? ''} ${t.user?.last_name ?? ''}`.trim() || 'Staff Member',
+          email: t.user?.email ?? '',
+          department: t.department ?? 'General',
+          specialization: t.specialization ?? '—',
+          experience_years: t.experience_years ?? 0,
+          joining_date: t.joining_date ?? '',
+          is_class_teacher: t.is_class_teacher ?? false,
+          is_active: t.is_active ?? true,
+          employee_id: t.employee_id ?? `EMP${t.id}`,
+        }));
+      }
+
+      if (backendData || realTeachers.length > 0) {
+        const total    = realTeachers.length || backendData?.stats?.total_teachers || 0;
+        const active   = realTeachers.filter(t => t.is_active).length || backendData?.stats?.active_teachers || 0;
+        const inactive = realTeachers.filter(t => !t.is_active).length || backendData?.stats?.inactive_teachers || 0;
+        const ctCount  = realTeachers.filter(t => t.is_class_teacher).length || backendData?.stats?.class_teachers || 0;
+
+        // Dept distribution from real list
+        const deptMap: Record<string, number> = {};
+        realTeachers.forEach(t => {
+          const d = t.department || 'Other';
+          deptMap[d] = (deptMap[d] || 0) + 1;
+        });
+        const deptDist = Object.entries(deptMap).map(([department, count]) => ({ department, count }));
+
+        setData({
+          stats: {
+            total_teachers:   total,
+            active_teachers:  active,
+            inactive_teachers: inactive,
+            class_teachers:   ctCount,
+            new_joinees:      backendData?.stats?.new_joinees      ?? SAMPLE_DATA.stats.new_joinees,
+            marks_this_month: backendData?.stats?.marks_this_month ?? SAMPLE_DATA.stats.marks_this_month,
+            pending_marks:    backendData?.stats?.pending_marks    ?? SAMPLE_DATA.stats.pending_marks,
+            attendance_today: backendData?.stats?.attendance_today ?? active,
+          },
+          department_distribution: deptDist.length > 0 ? deptDist : SAMPLE_DATA.department_distribution,
+          experience_distribution: backendData?.experience_distribution ?? SAMPLE_DATA.experience_distribution,
+          class_teacher_allocations: backendData?.class_teacher_allocations ?? SAMPLE_DATA.class_teacher_allocations,
+          today_schedule: backendData?.today_schedule ?? SAMPLE_DATA.today_schedule,
+          upcoming_exams: backendData?.upcoming_exams ?? SAMPLE_DATA.upcoming_exams,
+          joining_trend:  backendData?.joining_trend  ?? SAMPLE_DATA.joining_trend,
+          recent_teachers: realTeachers.length > 0 ? realTeachers.slice(0, 8) : SAMPLE_DATA.recent_teachers,
+          subject_coverage: backendData?.subject_coverage ?? SAMPLE_DATA.subject_coverage,
+          academic_year: backendData?.academic_year ?? SAMPLE_DATA.academic_year,
+          today: new Date().toISOString().split('T')[0],
+          day_of_week: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        });
+        setIsSample(false);
+      } else {
+        setData(SAMPLE_DATA);
+        setIsSample(true);
+      }
+    } catch {
+      setData(SAMPLE_DATA);
+      setIsSample(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
-  const QUICK_ACTIONS = [
-    { icon: '➕', label: 'Add Teacher',       path: '/teachers/teachers-list' },
-    { icon: '📋', label: 'Timetable',          path: '/teachers/timetable-allocation' },
-    { icon: '🏫', label: 'Class Allocation',   path: '/teachers/class-allocation' },
-    { icon: '📖', label: 'Subject Allocation', path: '/teachers/subject-allocation' },
-    { icon: '📅', label: 'Attendance',         path: '/teachers/attendance' },
-    { icon: '📈', label: 'Performance',        path: '/teachers/performance' },
-    { icon: '🏖️', label: 'Leave Mgmt',        path: '/teachers/leave' },
-    { icon: '💰', label: 'Payroll',            path: '/teachers/payroll' },
-  ];
+  if (loading) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <div className="tdb-root tdb-loader"><div className="tdb-spin" /></div>
+      </>
+    );
+  }
 
-  if (loading) return (
-    <><style>{CSS}</style><div className="tdb-root"><div className="tdb-loader"><div className="tdb-spin" /></div></div></>
-  );
-
-  const d = data!;
-  const today = new Date(d.today);
+  const { stats, department_distribution, experience_distribution, class_teacher_allocations,
+          today_schedule, upcoming_exams, joining_trend, recent_teachers } = data;
 
   return (
     <>
@@ -354,217 +419,238 @@ export default function TeacherDashboard() {
         {/* ── Header ── */}
         <div className="tdb-header">
           <div className="tdb-header-left">
-            <h1>👩‍🏫 Teacher & Staff Dashboard</h1>
-            <p>
-              {d.day_of_week}, {today.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-              &nbsp;·&nbsp; Academic Year: <strong style={{ color: '#8b5cf6' }}>{d.academic_year?.name ?? 'N/A'}</strong>
-            </p>
+            <h1>👨‍🏫 Teachers & Staff Dashboard</h1>
+            <p>Academic year {data.academic_year?.name ?? '2026-27'} · {data.day_of_week}, {data.today}</p>
           </div>
           <div className="tdb-header-actions">
-            <button className="tdb-btn tdb-btn-ghost" onClick={load}>🔄 Refresh</button>
-            <button className="tdb-btn tdb-btn-primary" onClick={() => navigate('/teachers/teachers-list')}>➕ Add Teacher</button>
+            <button className="tdb-btn tdb-btn-ghost" onClick={fetchDashboard}>🔄 Refresh Data</button>
+            <button className="tdb-btn tdb-btn-primary" onClick={() => navigate('/teachers/employee-master/add')}>➕ Add New Staff</button>
           </div>
         </div>
 
-        {/* ── Sample Banner ── */}
-        {usingSample && (
+        {/* ── Sample Data Warning Banner ── */}
+        {isSample && (
           <div className="tdb-sample-banner">
-            ⚠️ {error ? `API: ${error} — ` : ''}Showing sample data for preview.
+            <span>⚠️</span>
+            <span>Showing sample data preview because backend API is unreachable or returned empty. Add staff records to populate live metrics.</span>
           </div>
         )}
 
-        {/* ── Stats ── */}
-        <div className="tdb-stats-grid">
-          <StatCard icon="👩‍🏫" label="Total Teachers"   value={d.stats.total_teachers}  accent="#6366f1" trend={`+${d.stats.new_joinees} this month`} />
-          <StatCard icon="✅"   label="Active Teachers"  value={d.stats.active_teachers} accent="#22c55e" sub={`${d.stats.inactive_teachers} inactive`} />
-          <StatCard icon="🏫"   label="Class Teachers"   value={d.stats.class_teachers}  accent="#8b5cf6" sub="Allocated this year" />
-          <StatCard icon="🆕"   label="New Joinees"      value={d.stats.new_joinees}     accent="#f59e0b" sub="This month" />
-          <StatCard icon="📝"   label="Marks Entered"    value={d.stats.marks_this_month} accent="#0ea5e9" sub="This month" />
-          <StatCard icon="⏳"   label="Pending Marks"    value={d.stats.pending_marks}   accent="#ef4444" />
-          <StatCard icon="📊"   label="Today's Attendance" value={d.stats.attendance_today} accent="#14b8a6" />
-          <StatCard icon="🎯"   label="Active Rate"
-            value={`${d.stats.total_teachers > 0 ? Math.round((d.stats.active_teachers / d.stats.total_teachers) * 100) : 0}%`}
-            accent="#a855f7" sub="Active vs total" />
-        </div>
-
-        {/* ── Quick Actions ── */}
+        {/* ── Quick Actions Grid ── */}
         <div className="tdb-quick-grid">
-          {QUICK_ACTIONS.map((qa) => (
-            <div key={qa.path} className="tdb-qa-card" onClick={() => navigate(qa.path)} role="button" tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && navigate(qa.path)}>
+          {[
+            { icon:'👨‍💼', label:'Employee Master',   route:'/teachers/employee-master' },
+            { icon:'➕',  label:'Add New Staff',     route:'/teachers/employee-master/add' },
+            { icon:'👥',  label:'Teaching Staff',    route:'/teachers/teachers-list' },
+            { icon:'🛠️', label:'Non-Teaching',      route:'/teachers/non-teaching' },
+            { icon:'🏢',  label:'Departments',       route:'/teachers/departments' },
+            { icon:'🏷️', label:'Designations',      route:'/teachers/designations' },
+            { icon:'🎓',  label:'Qualifications',    route:'/teachers/qualifications' },
+            { icon:'📄',  label:'Documents',          route:'/teachers/documents' },
+            { icon:'🗂️', label:'Experience',          route:'/teachers/experience' },
+            { icon:'🚀',  label:'Joining & Onboarding', route:'/teachers/joining' },
+            { icon:'🔄',  label:'Transfers',             route:'/teachers/transfers' },
+            { icon:'🚪',  label:'Exit & Resignation',    route:'/teachers/exits' },
+            { icon:'🎓',  label:'Class Teacher',          route:'/teachers/class-allocation' },
+            { icon:'📚',  label:'Subject Allocation',      route:'/teachers/subject-allocation' },
+            { icon:'📅',  label:'Timetable Scheduling',     route:'/teachers/timetable-allocation' },
+            { icon:'🕐',  label:'Employee Attendance',       route:'/teachers/employee-attendance' },
+            { icon:'📝',  label:'Leave Management',          route:'/teachers/leave-management' },
+            { icon:'🔄',  label:'Substitute Allocation',     route:'/teachers/substitute-teacher' },
+            { icon:'📈',  label:'Workload Monitor',           route:'/teachers/workload' },
+            { icon:'⭐',  label:'Performance Management',     route:'/teachers/performance' },
+            { icon:'🎓',  label:'Training & Workshops',        route:'/teachers/training' },
+            { icon:'🛡️',  label:'Grievance Desk',              route:'/teachers/grievance' },
+            { icon:'🪪',  label:'ID Card Allocation',           route:'/teachers/id-card' },
+            { icon:'✉️',  label:'Employee Communication',      route:'/teachers/communication' },
+          ].map(qa => (
+            <div key={qa.label} className="tdb-qa-card" onClick={() => navigate(qa.route)}>
               <div className="tdb-qa-icon">{qa.icon}</div>
               <div className="tdb-qa-label">{qa.label}</div>
             </div>
           ))}
         </div>
 
-        {/* ── Tabs ── */}
-        <div className="tdb-tabs">
-          {(['overview', 'schedule', 'exams'] as const).map((tab) => (
-            <button key={tab} className={`tdb-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-              {tab === 'overview' ? '📊 Overview' : tab === 'schedule' ? "📅 Today's Schedule" : '📝 Exams'}
-            </button>
-          ))}
+        {/* ── KPI Stat Cards ── */}
+        <div className="tdb-stats-grid">
+          <StatCard icon="👥" label="Total Staff Members" value={stats.total_teachers} sub={`${stats.active_teachers} active`} accentBg="bg-blue-100" accentText="text-blue-600" />
+          <StatCard icon="✅" label="Active Teaching Staff" value={stats.active_teachers} sub={`${stats.inactive_teachers} inactive`} accentBg="bg-green-100" accentText="text-green-600" trend="+2 this month" />
+          <StatCard icon="🏫" label="Class Teachers Assigned" value={stats.class_teachers} sub="Assigned to primary classes" accentBg="bg-purple-100" accentText="text-purple-600" />
+          <StatCard icon="📅" label="Today's Attendance" value={`${stats.attendance_today} / ${stats.active_teachers}`} sub="Staff present today" accentBg="bg-amber-100" accentText="text-amber-600" />
         </div>
 
-        {/* ═══════════════ OVERVIEW ═══════════════ */}
+        {/* ── Navigation Tabs ── */}
+        <div className="tdb-tabs">
+          <button className={`tdb-tab ${activeTab === 'overview'  ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>📊 Overview & Distribution</button>
+          <button className={`tdb-tab ${activeTab === 'academics' ? 'active' : ''}`} onClick={() => setActiveTab('academics')}>🗓️ Schedule & Exams</button>
+          <button className={`tdb-tab ${activeTab === 'teachers'  ? 'active' : ''}`} onClick={() => setActiveTab('teachers')}>👥 Recent Staff Directory</button>
+        </div>
+
+        {/* ════════ TAB 1: OVERVIEW ════════ */}
         {activeTab === 'overview' && (
           <>
             <div className="tdb-grid-2">
-              {/* Department */}
+              {/* Department Distribution */}
               <div className="tdb-panel">
-                <p className="tdb-panel-title"><span className="tdb-panel-title-left">🏢 Department Distribution</span></p>
-                <MiniBarChart data={d.department_distribution} labelKey="department" valueKey="count" />
+                <div className="tdb-panel-title">
+                  <div className="tdb-panel-title-left"><span>🏢</span> Department Distribution</div>
+                  <span style={{ fontSize:'.75rem', color:'#64748b' }}>{department_distribution.length} Depts</span>
+                </div>
+                <MiniBarChart data={department_distribution} labelKey="department" valueKey="count" />
               </div>
-              {/* Experience Donut */}
+
+              {/* Experience Distribution */}
               <div className="tdb-panel">
-                <p className="tdb-panel-title"><span className="tdb-panel-title-left">📈 Experience Distribution</span></p>
-                <ExperienceDonut dist={d.experience_distribution} />
+                <div className="tdb-panel-title">
+                  <div className="tdb-panel-title-left"><span>🎖️</span> Experience Breakdown</div>
+                  <span style={{ fontSize:'.75rem', color:'#64748b' }}>By years served</span>
+                </div>
+                <DonutChart dist={experience_distribution} />
               </div>
             </div>
 
             <div className="tdb-grid-3">
-              {/* Joining Trend */}
+              {/* Monthly Joining Trend */}
               <div className="tdb-panel">
-                <p className="tdb-panel-title"><span className="tdb-panel-title-left">📅 Joining Trend (Last 6 Months)</span></p>
-                <SparklineBar trend={d.joining_trend} />
-              </div>
-              {/* Class Allocations */}
-              <div className="tdb-panel">
-                <p className="tdb-panel-title"><span className="tdb-panel-title-left">🏫 Class Allocations</span></p>
-                {d.class_teacher_allocations.length > 0 ? (
-                  <div className="tdb-alloc-list">
-                    {d.class_teacher_allocations.map((a, i) => (
-                      <div key={i} className="tdb-alloc-row">
-                        <span className="tdb-alloc-name">👤 {a.teacher_name}</span>
-                        <span className="tdb-alloc-cls">{a.class_name} {a.section}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : <div className="tdb-empty">No allocations yet</div>}
-              </div>
-            </div>
-
-            {/* Subject Coverage */}
-            {d.subject_coverage.length > 0 && (
-              <div className="tdb-panel" style={{ marginBottom: 16 }}>
-                <p className="tdb-panel-title"><span className="tdb-panel-title-left">📚 Subject Period Coverage</span></p>
-                <MiniBarChart data={d.subject_coverage} labelKey="subject" valueKey="periods" />
-              </div>
-            )}
-
-            {/* Recent Teachers */}
-            <div className="tdb-panel">
-              <p className="tdb-panel-title">
-                <span className="tdb-panel-title-left">👥 Recently Joined Teachers</span>
-                <button className="tdb-btn tdb-btn-ghost" style={{ fontSize: '.72rem', padding: '4px 12px' }}
-                  onClick={() => navigate('/teachers/teachers-list')}>View All →</button>
-              </p>
-              {d.recent_teachers.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="tdb-teacher-table">
-                    <thead>
-                      <tr>
-                        <th>Teacher</th><th>Emp ID</th><th>Department</th>
-                        <th>Specialization</th><th>Experience</th><th>Joining Date</th>
-                        <th>Role</th><th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {d.recent_teachers.map((t) => (
-                        <tr key={t.id}>
-                          <td>
-                            <div className="tdb-td-name">
-                              <div className="tdb-avatar">{t.name.slice(0, 2).toUpperCase()}</div>
-                              <div>
-                                <div style={{ fontWeight: 600, color: '#e2e8f0' }}>{t.name}</div>
-                                <div style={{ fontSize: '.65rem', color: '#475569' }}>{t.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ color: '#6366f1', fontWeight: 600 }}>{t.employee_id}</td>
-                          <td>{t.department}</td>
-                          <td>{t.specialization}</td>
-                          <td>{t.experience_years} yrs</td>
-                          <td>{t.joining_date ? new Date(t.joining_date).toLocaleDateString('en-IN') : 'N/A'}</td>
-                          <td>
-                            {t.is_class_teacher
-                              ? <span className="chip-ct">Class Teacher</span>
-                              : <span className="chip-st">Subject Teacher</span>}
-                          </td>
-                          <td>
-                            <span className="tdb-status-dot" style={{ background: t.is_active ? '#22c55e' : '#ef4444' }} />
-                            <span style={{ color: t.is_active ? '#4ade80' : '#f87171' }}>
-                              {t.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="tdb-panel-title">
+                  <div className="tdb-panel-title-left"><span>📈</span> Staff Onboarding Trend</div>
+                  <span style={{ fontSize:'.75rem', color:'#64748b' }}>Last 6 months</span>
                 </div>
-              ) : <div className="tdb-empty">No teachers added yet</div>}
+                <SparklineBar trend={joining_trend} />
+              </div>
+
+              {/* Class Teacher Allocation */}
+              <div className="tdb-panel">
+                <div className="tdb-panel-title">
+                  <div className="tdb-panel-title-left"><span>🏫</span> Class Teacher Allocation</div>
+                  <button className="tdb-btn tdb-btn-ghost" style={{ padding:'3px 8px', fontSize:'.7rem' }} onClick={() => navigate('/teachers/employee-master')}>View All</button>
+                </div>
+                <div className="tdb-alloc-list">
+                  {class_teacher_allocations.slice(0, 4).map((item, i) => (
+                    <div key={i} className="tdb-alloc-row">
+                      <span className="tdb-alloc-name">👤 {item.teacher_name}</span>
+                      <span className="tdb-alloc-cls">{item.class_name}-{item.section}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </>
         )}
 
-        {/* ═══════════════ SCHEDULE ═══════════════ */}
-        {activeTab === 'schedule' && (
-          <div className="tdb-panel">
-            <p className="tdb-panel-title"><span className="tdb-panel-title-left">📅 Today's Schedule — {d.day_of_week}</span></p>
-            {d.today_schedule.length > 0 ? (
-              <div className="tdb-schedule">
-                {d.today_schedule.map((slot, i) => (
-                  <div key={i} className="tdb-schedule-slot">
-                    <div className="tdb-slot-time">{slot.start_time} – {slot.end_time}</div>
-                    <div>
-                      <div className="tdb-slot-teacher">
-                        👤 {slot.teacher_name} · <span className="tdb-slot-badge">{slot.subject}</span>
+        {/* ════════ TAB 2: ACADEMICS & SCHEDULE ════════ */}
+        {activeTab === 'academics' && (
+          <div className="tdb-grid-2">
+            {/* Today's Schedule */}
+            <div className="tdb-panel">
+              <div className="tdb-panel-title">
+                <div className="tdb-panel-title-left"><span>🗓️</span> Today's Teaching Schedule</div>
+                <span style={{ fontSize:'.75rem', color:'#64748b' }}>{today_schedule.length} slots today</span>
+              </div>
+              {today_schedule.length === 0 ? (
+                <div className="tdb-empty">No classes scheduled for today.</div>
+              ) : (
+                <div className="tdb-schedule">
+                  {today_schedule.map((slot, i) => (
+                    <div key={i} className="tdb-schedule-slot">
+                      <div>
+                        <div className="tdb-slot-time">{slot.start_time} – {slot.end_time}</div>
+                        <div style={{ fontSize:'.68rem', color:'#64748b' }}>Room {slot.room}</div>
                       </div>
-                      <div className="tdb-slot-meta">🏫 {slot.class} &nbsp;·&nbsp; 🚪 Room {slot.room}</div>
+                      <div>
+                        <div className="tdb-slot-teacher">
+                          <span>{slot.teacher_name}</span>
+                          <span className="tdb-slot-badge">{slot.subject}</span>
+                        </div>
+                        <div className="tdb-slot-meta">Assigned Class: {slot.class}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Upcoming Exams */}
+            <div className="tdb-panel">
+              <div className="tdb-panel-title">
+                <div className="tdb-panel-title-left"><span>📝</span> Upcoming Examination Schedule</div>
+                <span style={{ fontSize:'.75rem', color:'#64748b' }}>{upcoming_exams.length} upcoming</span>
               </div>
-            ) : (
-              <div className="tdb-empty">
-                <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>😴</div>
-                No periods scheduled for {d.day_of_week}
-              </div>
-            )}
+              {upcoming_exams.length === 0 ? (
+                <div className="tdb-empty">No upcoming examinations found.</div>
+              ) : (
+                <div className="tdb-exam-list">
+                  {upcoming_exams.map((exam) => (
+                    <div key={exam.id} className="tdb-exam-card">
+                      <div>
+                        <div className="tdb-exam-name">📋 {exam.name}</div>
+                        <div className="tdb-exam-dates">📅 {exam.start_date} to {exam.end_date}</div>
+                      </div>
+                      <span className={`tdb-exam-badge ${exam.days_left <= 7 ? 'tdb-badge-soon' : 'tdb-badge-upcoming'}`}>
+                        {exam.days_left === 0 ? 'Starts Today' : `In ${exam.days_left} days`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ═══════════════ EXAMS ═══════════════ */}
-        {activeTab === 'exams' && (
+        {/* ════════ TAB 3: RECENT TEACHERS ════════ */}
+        {activeTab === 'teachers' && (
           <div className="tdb-panel">
-            <p className="tdb-panel-title"><span className="tdb-panel-title-left">📝 Upcoming Examinations</span></p>
-            {d.upcoming_exams.length > 0 ? (
-              <div className="tdb-exam-list">
-                {d.upcoming_exams.map((exam) => {
-                  const isUrgent = exam.days_left <= 7;
-                  return (
-                    <div key={exam.id} className="tdb-exam-card"
-                      style={{ borderLeftColor: isUrgent ? '#ef4444' : exam.status === 'active' ? '#22c55e' : '#6366f1' }}>
-                      <div>
-                        <div className="tdb-exam-name">{exam.name}</div>
-                        <div className="tdb-exam-dates">
-                          📅 {new Date(exam.start_date).toLocaleDateString('en-IN')} — {new Date(exam.end_date).toLocaleDateString('en-IN')}
+            <div className="tdb-panel-title">
+              <div className="tdb-panel-title-left"><span>👥</span> Recently Onboarded & Active Staff Directory</div>
+              <button className="tdb-btn tdb-btn-primary" style={{ padding:'6px 14px', fontSize:'.76rem' }} onClick={() => navigate('/teachers/employee-master')}>
+                View Full Employee Master →
+              </button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="tdb-teacher-table">
+                <thead>
+                  <tr>
+                    <th>Staff Name & Email</th>
+                    <th>Employee ID</th>
+                    <th>Department</th>
+                    <th>Specialization</th>
+                    <th>Experience</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recent_teachers.map(t => (
+                    <tr key={t.id}>
+                      <td>
+                        <div className="tdb-td-name">
+                          <div className="tdb-avatar">{t.name.slice(0, 2).toUpperCase()}</div>
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{t.name}</div>
+                            <div style={{ fontSize: '.72rem', color: '#64748b' }}>{t.email}</div>
+                          </div>
                         </div>
-                      </div>
-                      <span className={`tdb-exam-badge ${isUrgent ? 'tdb-badge-soon' : exam.status === 'active' ? 'tdb-badge-active' : 'tdb-badge-upcoming'}`}>
-                        {isUrgent ? `🔥 ${exam.days_left}d left` : `${exam.days_left} days`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="tdb-empty">
-                <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✅</div>
-                No upcoming exams scheduled
-              </div>
-            )}
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#2563eb' }}>{t.employee_id}</td>
+                      <td>{t.department ? <span className="chip-dept">{t.department}</span> : '—'}</td>
+                      <td style={{ color: '#475569' }}>{t.specialization}</td>
+                      <td>{t.experience_years} yrs</td>
+                      <td>
+                        <span className={t.is_class_teacher ? 'chip-ct' : 'chip-st'}>
+                          {t.is_class_teacher ? '🏫 Class Teacher' : '📖 Subject Teacher'}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ color: t.is_active ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: '.76rem' }}>
+                          <span className="tdb-status-dot" style={{ background: t.is_active ? '#22c55e' : '#ef4444' }} />
+                          {t.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

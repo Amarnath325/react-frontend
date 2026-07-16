@@ -4,9 +4,9 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { Building2 } from 'lucide-react';
+import { Award } from 'lucide-react';
 
-interface Department {
+interface Designation {
   id: number;
   school_id: number;
   name: string;
@@ -18,7 +18,7 @@ interface Department {
   deleted_at?: string | null;
 }
 
-// Toggle Switch Component (Compact size - matches Show Trashed switch size)
+// Toggle Switch Component (Compact size)
 const ToggleSwitch: React.FC<{
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -57,12 +57,12 @@ const ToggleSwitch: React.FC<{
   return button;
 };
 
-const DepartmentManager: React.FC = () => {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [filteredData, setFilteredData] = useState<Department[]>([]);
+const DesignationManager: React.FC = () => {
+  const [designations, setDesignations] = useState<Designation[]>([]);
+  const [filteredData, setFilteredData] = useState<Designation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Department | null>(null);
+  const [editingItem, setEditingItem] = useState<Designation | null>(null);
   
   // Trashed items filter state
   const [showTrashed, setShowTrashed] = useState(false);
@@ -98,36 +98,36 @@ const DepartmentManager: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchDepartments();
+    fetchDesignations();
   }, [showTrashed]);
 
   useEffect(() => {
     applyFiltersAndSorting();
-  }, [departments, searchTerm, filterStatus, sortColumn, sortDirection]);
+  }, [designations, searchTerm, filterStatus, sortColumn, sortDirection]);
 
   useEffect(() => {
     setSelectedItems(new Set());
   }, [searchTerm, filterStatus, showTrashed, currentPage, itemsPerPage]);
 
-  const fetchDepartments = async () => {
+  const fetchDesignations = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/school/departments', {
+      const response = await api.get('/school/designations', {
         params: { only_trashed: showTrashed }
       });
       if (response.data.success) {
-        setDepartments(response.data.data);
+        setDesignations(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching departments:', error);
-      toast.error('Failed to load departments');
+      console.error('Error fetching designations:', error);
+      toast.error('Failed to load designations');
     } finally {
       setLoading(false);
     }
   };
 
   const applyFiltersAndSorting = () => {
-    let filtered = [...departments];
+    let filtered = [...designations];
 
     if (searchTerm) {
       filtered = filtered.filter(item => 
@@ -143,8 +143,8 @@ const DepartmentManager: React.FC = () => {
 
     // Sorting
     filtered.sort((a, b) => {
-      let aVal: any = a[sortColumn as keyof Department] ?? '';
-      let bVal: any = b[sortColumn as keyof Department] ?? '';
+      let aVal: any = a[sortColumn as keyof Designation] ?? '';
+      let bVal: any = b[sortColumn as keyof Designation] ?? '';
       
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
@@ -205,7 +205,7 @@ const DepartmentManager: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (item: Department) => {
+  const openEditModal = (item: Designation) => {
     setEditingItem(item);
     setFormData({
       name: item.name,
@@ -220,7 +220,7 @@ const DepartmentManager: React.FC = () => {
     e.preventDefault();
 
     if (!formData.name) {
-      toast.error('Department name is required');
+      toast.error('Designation name is required');
       return;
     }
 
@@ -233,18 +233,18 @@ const DepartmentManager: React.FC = () => {
       };
 
       if (editingItem) {
-        const response = await api.put(`/school/departments/${editingItem.id}`, submitData);
+        const response = await api.put(`/school/designations/${editingItem.id}`, submitData);
         if (response.data.success) {
-          toast.success('Department updated successfully');
+          toast.success('Designation updated successfully');
         }
       } else {
-        const response = await api.post('/school/departments', submitData);
+        const response = await api.post('/school/designations', submitData);
         if (response.data.success) {
-          toast.success('Department created successfully');
+          toast.success('Designation created successfully');
         }
       }
       setIsModalOpen(false);
-      fetchDepartments();
+      fetchDesignations();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Operation failed');
     }
@@ -253,10 +253,10 @@ const DepartmentManager: React.FC = () => {
   const handleDelete = async (id: number, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
-        const response = await api.delete(`/school/departments/${id}`);
+        const response = await api.delete(`/school/designations/${id}`);
         if (response.data.success) {
-          toast.success('Department deleted successfully');
-          fetchDepartments();
+          toast.success('Designation deleted successfully');
+          fetchDesignations();
         }
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Delete failed');
@@ -266,10 +266,10 @@ const DepartmentManager: React.FC = () => {
 
   const handleToggleStatus = async (id: number) => {
     try {
-      const response = await api.patch(`/school/departments/${id}/toggle-status`);
+      const response = await api.patch(`/school/designations/${id}/toggle-status`);
       if (response.data.success) {
-        toast.success('Department status updated');
-        fetchDepartments();
+        toast.success('Designation status updated');
+        fetchDesignations();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update status');
@@ -277,28 +277,28 @@ const DepartmentManager: React.FC = () => {
   };
 
   const handleRestore = async (id: number) => {
-    if (!window.confirm('Are you sure you want to restore this department?')) return;
+    if (!window.confirm('Are you sure you want to restore this designation?')) return;
     try {
-      const response = await api.post(`/school/departments/${id}/restore`);
+      const response = await api.post(`/school/designations/${id}/restore`);
       if (response.data.success) {
-        toast.success('Department restored successfully');
-        fetchDepartments();
+        toast.success('Designation restored successfully');
+        fetchDesignations();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to restore department');
+      toast.error(error.response?.data?.message || 'Failed to restore designation');
     }
   };
 
   const handleForceDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to permanently delete this department? This action cannot be undone.')) return;
+    if (!window.confirm('Are you sure you want to permanently delete this designation? This action cannot be undone.')) return;
     try {
-      const response = await api.delete(`/school/departments/${id}/force`);
+      const response = await api.delete(`/school/designations/${id}/force`);
       if (response.data.success) {
-        toast.success('Department permanently deleted');
-        fetchDepartments();
+        toast.success('Designation permanently deleted');
+        fetchDesignations();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to permanently delete department');
+      toast.error(error.response?.data?.message || 'Failed to permanently delete designation');
     }
   };
 
@@ -329,14 +329,14 @@ const DepartmentManager: React.FC = () => {
     const ids = Array.from(selectedItems);
     
     try {
-      const response = await api.post('/school/departments/bulk-status', {
+      const response = await api.post('/school/designations/bulk-status', {
         status: status ? 'active' : 'inactive',
         ids: ids
       });
       if (response.data.success) {
         toast.success(response.data.message || 'Status updated successfully');
         setSelectedItems(new Set());
-        fetchDepartments();
+        fetchDesignations();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update status');
@@ -347,22 +347,22 @@ const DepartmentManager: React.FC = () => {
 
   const handleBulkDelete = async () => {
     const confirmMessage = showTrashed
-      ? `Are you sure you want to permanently delete ${selectedItems.size} selected department(s)? This action cannot be undone.`
-      : `Are you sure you want to delete ${selectedItems.size} selected department(s)?`;
+      ? `Are you sure you want to permanently delete ${selectedItems.size} selected designation(s)? This action cannot be undone.`
+      : `Are you sure you want to delete ${selectedItems.size} selected designation(s)?`;
 
     if (window.confirm(confirmMessage)) {
       setBulkUpdating(true);
       const ids = Array.from(selectedItems);
       
       try {
-        const response = await api.post('/school/departments/bulk-delete', {
+        const response = await api.post('/school/designations/bulk-delete', {
           ids: ids,
           force: showTrashed
         });
         if (response.data.success) {
           toast.success(response.data.message || 'Deleted successfully');
           setSelectedItems(new Set());
-          fetchDepartments();
+          fetchDesignations();
         }
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Failed to delete');
@@ -373,18 +373,18 @@ const DepartmentManager: React.FC = () => {
   };
 
   const handleBulkRestore = async () => {
-    if (window.confirm(`Are you sure you want to restore ${selectedItems.size} selected department(s)?`)) {
+    if (window.confirm(`Are you sure you want to restore ${selectedItems.size} selected designation(s)?`)) {
       setBulkUpdating(true);
       const ids = Array.from(selectedItems);
       
       try {
-        const response = await api.post('/school/departments/bulk-restore', {
+        const response = await api.post('/school/designations/bulk-restore', {
           ids: ids
         });
         if (response.data.success) {
           toast.success(response.data.message || 'Restored successfully');
           setSelectedItems(new Set());
-          fetchDepartments();
+          fetchDesignations();
         }
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Failed to restore');
@@ -398,16 +398,16 @@ const DepartmentManager: React.FC = () => {
   const handleExport = () => {
     try {
       const exportData = filteredData.map(item => ({
-        'Department Name': item.name,
-        'Department Code': item.code || '',
+        'Designation Name': item.name,
+        'Designation Code': item.code || '',
         'Description': item.description || '',
         'Status': item.is_active ? 'Active' : 'Inactive',
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      Xcontent_append_sheet: XLSX.utils.book_append_sheet(wb, ws, 'Departments');
-      XLSX.writeFile(wb, `departments_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, 'Designations');
+      XLSX.writeFile(wb, `designations_${new Date().toISOString().split('T')[0]}.xlsx`);
       toast.success('Export successful!');
     } catch (error) {
       console.error('Export error:', error);
@@ -420,25 +420,25 @@ const DepartmentManager: React.FC = () => {
       const statusValues = ['Active', 'Inactive'];
 
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Departments');
+      const worksheet = workbook.addWorksheet('Designations');
 
       worksheet.columns = [
-        { header: 'Department Name', key: 'departmentName', width: 25 },
-        { header: 'Department Code', key: 'departmentCode', width: 15 },
+        { header: 'Designation Name', key: 'designationName', width: 25 },
+        { header: 'Designation Code', key: 'designationCode', width: 15 },
         { header: 'Description', key: 'description', width: 35 },
         { header: 'Status', key: 'status', width: 15 },
       ];
 
       worksheet.addRow({
-        departmentName: 'Science Department',
-        departmentCode: 'SCI',
-        description: 'Covers physics, chemistry, and biology subjects',
+        designationName: 'Principal',
+        designationCode: 'PRIN',
+        description: 'Head of the institution',
         status: 'Active',
       });
       worksheet.addRow({
-        departmentName: 'Mathematics Department',
-        departmentCode: 'MATH',
-        description: 'Covers algebra, geometry, and calculus',
+        designationName: 'Vice Principal',
+        designationCode: 'VP',
+        description: 'Second in command of the institution',
         status: 'Active',
       });
 
@@ -454,7 +454,7 @@ const DepartmentManager: React.FC = () => {
         worksheet.getCell(`D${r}`).dataValidation = {
           type: 'list',
           allowBlank: true,
-          formulae: [`'Departments'!$F$2:$F$3`],
+          formulae: [`'Designations'!$F$2:$F$3`],
           showErrorMessage: true,
           errorTitle: 'Invalid Selection',
           error: 'Please select Active or Inactive.',
@@ -463,7 +463,7 @@ const DepartmentManager: React.FC = () => {
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, 'sample_departments.xlsx');
+      saveAs(blob, 'sample_designations.xlsx');
       toast.success('Sample file downloaded!');
     } catch (error) {
       console.error('Error downloading sample file:', error);
@@ -489,22 +489,22 @@ const DepartmentManager: React.FC = () => {
         let headers: string[] = [];
         
         for (let i = 0; i < rows.length; i++) {
-          const firstCell = rows[i][0];
-          if (firstCell && (firstCell === 'Department Name' || firstCell?.toString().includes('Department'))) {
+          const firstCell = (rows[i] as any[])[0];
+          if (firstCell && (firstCell === 'Designation Name' || firstCell?.toString().includes('Designation'))) {
             headerRowIndex = i;
-            headers = rows[i].map((cell: any) => cell?.toString().trim() || '');
+            headers = (rows[i] as any[]).map((cell: any) => cell?.toString().trim() || '');
             break;
           }
         }
         
         if (headerRowIndex === -1) {
-          toast.error('Could not find header row (e.g., "Department Name")');
+          toast.error('Could not find header row (e.g., "Designation Name")');
           return;
         }
         
         const dataRows: any[] = [];
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
-          const row = rows[i];
+          const row = rows[i] as any[];
           if (!row || row.length === 0) continue;
           
           const firstCell = row[0];
@@ -523,7 +523,7 @@ const DepartmentManager: React.FC = () => {
             }
           }
           
-          if (rowData['Department Name']) {
+          if (rowData['Designation Name']) {
             dataRows.push(rowData);
           }
         }
@@ -549,17 +549,17 @@ const DepartmentManager: React.FC = () => {
     setImporting(true);
     try {
       const payload = importData.map(row => ({
-        department_name: row['Department Name'],
-        department_code: row['Department Code'] || null,
+        designation_name: row['Designation Name'],
+        designation_code: row['Designation Code'] || null,
         description: row['Description'] || null,
         is_active: row['Status'] ? row['Status'].toLowerCase() === 'active' : true,
       }));
 
-      const response = await api.post('/school/departments/bulk-import', { data: payload });
+      const response = await api.post('/school/designations/bulk-import', { data: payload });
       if (response.data.success) {
         toast.success(response.data.message || 'Import completed successfully');
         setIsImportModalOpen(false);
-        fetchDepartments();
+        fetchDesignations();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Bulk import failed');
@@ -573,7 +573,7 @@ const DepartmentManager: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-2 text-gray-600">Loading departments...</p>
+          <p className="mt-2 text-gray-600">Loading designations...</p>
         </div>
       </div>
     );
@@ -585,12 +585,12 @@ const DepartmentManager: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Building2 className="w-5 h-5" />
+            <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+              <Award className="w-5 h-5" />
             </span>
-            <span>Department Management</span>
+            <span>Designation Management</span>
           </h1>
-          <p className="text-slate-500 mt-1 text-xs">Configure and manage institution departments, roles, and academic divisions</p>
+          <p className="text-slate-500 mt-1 text-xs">Configure and manage staff designations, job titles, and role hierarchies</p>
         </div>
       </div>
 
@@ -721,7 +721,7 @@ const DepartmentManager: React.FC = () => {
                 <button
                   onClick={handleBulkRestore}
                   disabled={bulkUpdating}
-                  className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-medium font-medium"
+                  className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-medium"
                 >
                   Restore Selected
                 </button>
@@ -794,7 +794,7 @@ const DepartmentManager: React.FC = () => {
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-6 text-center text-gray-500 font-medium">
-                  {showTrashed ? 'No deleted departments found.' : 'No departments found.'}
+                  {showTrashed ? 'No deleted designations found.' : 'No designations found.'}
                 </td>
               </tr>
             ) : (
@@ -955,7 +955,7 @@ const DepartmentManager: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-bold text-gray-800">
-                {editingItem ? 'Edit Department' : 'Add Department'}
+                {editingItem ? 'Edit Designation' : 'Add Designation'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -971,25 +971,25 @@ const DepartmentManager: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Department Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Designation Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      placeholder="e.g. Science Dept"
+                      placeholder="e.g. Principal"
                       className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Department Code</label>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Designation Code</label>
                     <input
                       type="text"
                       name="code"
                       value={formData.code}
                       onChange={handleInputChange}
-                      placeholder="e.g. SCI"
+                      placeholder="e.g. PRIN"
                       className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
@@ -1001,7 +1001,7 @@ const DepartmentManager: React.FC = () => {
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Provide some details about the department..."
+                    placeholder="Provide some details about the designation..."
                     rows={2}
                     className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
@@ -1027,7 +1027,7 @@ const DepartmentManager: React.FC = () => {
                     type="submit"
                     className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs font-medium"
                   >
-                    {editingItem ? 'Update' : 'Add'} Department
+                    {editingItem ? 'Update' : 'Add'} Designation
                   </button>
                 </div>
               </form>
@@ -1062,8 +1062,8 @@ const DepartmentManager: React.FC = () => {
               <table className="w-full text-left text-xs text-gray-700">
                 <thead>
                   <tr className="bg-gray-100 border-b font-semibold">
-                    <th className="py-2 px-3">Department Name</th>
-                    <th className="py-2 px-3">Department Code</th>
+                    <th className="py-2 px-3">Designation Name</th>
+                    <th className="py-2 px-3">Designation Code</th>
                     <th className="py-2 px-3">Description</th>
                     <th className="py-2 px-3">Status</th>
                   </tr>
@@ -1071,8 +1071,8 @@ const DepartmentManager: React.FC = () => {
                 <tbody className="divide-y divide-gray-200">
                   {importPreview.map((row, idx) => (
                     <tr key={idx} className="bg-white">
-                      <td className="py-2 px-3 font-medium">{row['Department Name']}</td>
-                      <td className="py-2 px-3">{row['Department Code'] || '-'}</td>
+                      <td className="py-2 px-3 font-medium">{row['Designation Name']}</td>
+                      <td className="py-2 px-3">{row['Designation Code'] || '-'}</td>
                       <td className="py-2 px-3 truncate max-w-xs">{row['Description'] || '-'}</td>
                       <td className="py-2 px-3">
                         <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
@@ -1109,4 +1109,4 @@ const DepartmentManager: React.FC = () => {
   );
 };
 
-export default DepartmentManager;
+export default DesignationManager;

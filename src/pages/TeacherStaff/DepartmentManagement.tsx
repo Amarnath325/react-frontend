@@ -1,6 +1,6 @@
 import React from 'react';
-import TeacherStaffHub from './TeacherStaffHub';
+import DepartmentManager from '../../components/Academic/DepartmentManager';
 
 export default function DepartmentManagement() {
-  return <TeacherStaffHub />;
+  return <DepartmentManager />;
 }

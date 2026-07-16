@@ -66,6 +66,7 @@ import AttendanceAnalytics from './pages/AttendanceManager/AttendanceAnalytics';
 // Teacher & Staff Management Pages Imports
 import StaffDashboard from './pages/TeacherStaff/Dashboard';
 import EmployeeMaster from './pages/TeacherStaff/EmployeeMaster';
+import EmployeeForm from './pages/TeacherStaff/EmployeeForm';
 import TeacherManagement from './pages/TeacherStaff/TeacherManagement';
 import NonTeachingStaffManagement from './pages/TeacherStaff/NonTeachingStaffManagement';
 import DepartmentManagement from './pages/TeacherStaff/DepartmentManagement';
@@ -605,6 +606,30 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <EmployeeMaster />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/teachers/employee-master/add"
+        element={
+          <ProtectedRouteWithLayout>
+            <EmployeeForm mode="add" />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/teachers/employee-master/edit/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <EmployeeForm mode="edit" />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/teachers/employee-master/view/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <EmployeeForm mode="view" />
           </ProtectedRouteWithLayout>
         }
       />
@@ -1835,6 +1860,14 @@ function AppContent() {
       />
       <Route
         path="/hostel/leaves"
+        element={
+          <ProtectedRouteWithLayout>
+            <OutpassManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/outpasses"
         element={
           <ProtectedRouteWithLayout>
             <OutpassManager />
