@@ -179,6 +179,7 @@ import GradeResultProcessor from './components/Examination/GradeResultProcessor'
 import ReportCardCertificateManager from './components/Examination/ReportCardCertificateManager';
 import PerformanceRankReports from './components/Examination/PerformanceRankReports';
 import ReExamSupplementaryManager from './components/Examination/ReExamSupplementaryManager';
+import ExamTypeManager from './components/Examination/ExamTypeManager';
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
 import AcademicCalendarPage from './pages/AcademicCalendarPage';
@@ -2142,6 +2143,14 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <ExaminationManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/exams/exam-types"
+        element={
+          <ProtectedRouteWithLayout>
+            <ExamTypeManager />
           </ProtectedRouteWithLayout>
         }
       />
