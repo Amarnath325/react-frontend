@@ -175,11 +175,14 @@ import SubjectExamMapping from './components/Examination/SubjectExamMapping';
 import ExamSeatingManager from './components/Examination/ExamSeatingManager';
 import AdmitCardInvigilatorManager from './components/Examination/AdmitCardInvigilatorManager';
 import MarksEntryVerification from './components/Examination/MarksEntryVerification';
+import MarksVerificationAudit from './components/Examination/MarksVerificationAudit';
 import GradeResultProcessor from './components/Examination/GradeResultProcessor';
+import ResultProcessingEngine from './components/Examination/ResultProcessingEngine';
 import ReportCardCertificateManager from './components/Examination/ReportCardCertificateManager';
 import PerformanceRankReports from './components/Examination/PerformanceRankReports';
 import ReExamSupplementaryManager from './components/Examination/ReExamSupplementaryManager';
 import ExamTypeManager from './components/Examination/ExamTypeManager';
+import ExamScheduleManager from './components/Examination/ExamScheduleManager';
 import Layout from './components/Layout';
 import SchoolSettings from './pages/SchoolSettings';
 import AcademicCalendarPage from './pages/AcademicCalendarPage';
@@ -1161,7 +1164,7 @@ function AppContent() {
         path="/exams/types"
         element={
           <ProtectedRouteWithLayout>
-            <ExaminationManager />
+            <ExamTypeManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -1179,7 +1182,7 @@ function AppContent() {
         path="/exams/schedule"
         element={
           <ProtectedRouteWithLayout>
-            <ExaminationManager />
+            <ExamScheduleManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -1242,7 +1245,7 @@ function AppContent() {
         path="/exams/marks-verification"
         element={
           <ProtectedRouteWithLayout>
-            <MarksEntryVerification />
+            <MarksVerificationAudit />
           </ProtectedRouteWithLayout>
         }
       />
@@ -1260,7 +1263,7 @@ function AppContent() {
         path="/exams/result-processing"
         element={
           <ProtectedRouteWithLayout>
-            <GradeResultProcessor />
+            <ResultProcessingEngine />
           </ProtectedRouteWithLayout>
         }
       />
@@ -2142,14 +2145,6 @@ function AppContent() {
         path="/exams/types"
         element={
           <ProtectedRouteWithLayout>
-            <ExaminationManager />
-          </ProtectedRouteWithLayout>
-        }
-      />
-      <Route
-        path="/exams/exam-types"
-        element={
-          <ProtectedRouteWithLayout>
             <ExamTypeManager />
           </ProtectedRouteWithLayout>
         }
@@ -2166,7 +2161,7 @@ function AppContent() {
         path="/exams/schedule"
         element={
           <ProtectedRouteWithLayout>
-            <ExaminationManager />
+            <ExamScheduleManager />
           </ProtectedRouteWithLayout>
         }
       />
@@ -2222,7 +2217,7 @@ function AppContent() {
         path="/exams/marks-verification"
         element={
           <ProtectedRouteWithLayout>
-            <MarksEntryVerification />
+            <MarksVerificationAudit />
           </ProtectedRouteWithLayout>
         }
       />
@@ -2238,7 +2233,7 @@ function AppContent() {
         path="/exams/result-processing"
         element={
           <ProtectedRouteWithLayout>
-            <GradeResultProcessor />
+            <ResultProcessingEngine />
           </ProtectedRouteWithLayout>
         }
       />

@@ -455,7 +455,6 @@ export default function ExamTypeManager() {
           </div>
           <div>
             <h3 className="text-[15px] font-bold text-gray-800">Exam Type Management</h3>
-            <p className="text-[12px] text-gray-500">Define and manage examination types used across your school assessments</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -478,76 +477,79 @@ export default function ExamTypeManager() {
       <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           {/* Search */}
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-              <Search className="h-3.5 w-3.5 text-gray-400" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search by name, code..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-7 pr-2 py-1 w-44 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:outline-none bg-white font-medium text-gray-800"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Search by name, code..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white font-medium text-gray-850 h-7 w-44"
+          />
 
           {/* Status filter */}
-          <div className="w-36">
-            <Select
-              options={[
-                { value: '1', label: 'Active' },
-                { value: '0', label: 'Inactive' },
-              ]}
-              value={filterStatus !== '' ? { value: filterStatus, label: filterStatus === '1' ? 'Active' : 'Inactive' } : null}
-              onChange={s => setFilterStatus(s ? s.value : '')}
-              placeholder="All Status"
-              isClearable
-              styles={selectStyles}
-            />
-          </div>
-
-          {/* Per page */}
           <select
-            value={itemsPerPage}
-            onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-            className="border border-gray-300 rounded py-1 px-1.5 text-xs bg-white focus:ring-1 focus:ring-purple-500 focus:outline-none h-7"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none h-7 cursor-pointer text-gray-700 font-medium w-32"
           >
-            {[10, 25, 50, 100, -1].map(n => <option key={n} value={n}>{n === -1 ? 'All' : n}</option>)}
+            <option value="">All Status</option>
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
           </select>
 
+          {/* Per page */}
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-1.5 py-0.5 h-7">
+            <span className="text-[10px] text-gray-500 font-semibold uppercase">Show:</span>
+            <select
+              value={itemsPerPage}
+              onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none cursor-pointer"
+            >
+              {[10, 25, 50, 100, -1].map(n => (
+                <option key={n} value={n}>{n === -1 ? 'All' : n}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Trashed */}
-          <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap select-none">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2 bg-white border border-gray-300 rounded px-2 py-0.5 h-7">
+            <span className="text-[11px] text-gray-500 font-semibold select-none">Show Trashed</span>
+            <ToggleSwitch
               checked={showTrashed}
-              onChange={e => { setShowTrashed(e.target.checked); setCurrentPage(1); }}
-              className="accent-purple-600 w-3 h-3"
+              onChange={() => { setShowTrashed(!showTrashed); setCurrentPage(1); }}
             />
-            <span className="text-gray-600 font-medium">Show Trashed</span>
-          </label>
+          </div>
         </div>
 
         {/* Right buttons */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={handleSampleDownload}
-            className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 transition text-[11px] font-medium h-7"
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition text-[11px] font-medium h-7"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" /> Sample
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Sample
           </button>
-          <label className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 transition text-[11px] font-medium h-7 cursor-pointer">
-            <Upload className="w-3.5 h-3.5" /> Import
+          <label className="flex items-center gap-1 px-2.5 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition text-[11px] font-medium h-7 cursor-pointer">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import
             <input type="file" accept=".xlsx,.xls" onChange={handleFileSelect} className="hidden" />
           </label>
           <button
             onClick={handleExport}
-            className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 transition text-[11px] font-medium h-7"
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition text-[11px] font-medium h-7"
           >
-            <Download className="w-3.5 h-3.5" /> Export
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
           </button>
           <button
             onClick={openAdd}
-            className="flex items-center gap-1 px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700 transition text-[11px] font-semibold h-7 shadow"
+            className="flex items-center gap-1 px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition text-[11px] font-semibold h-7 shadow"
           >
             <Plus className="w-3.5 h-3.5" /> Add New
           </button>

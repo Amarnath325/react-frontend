@@ -6,30 +6,34 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import Select from 'react-select';
 import {
-  BookOpen, Award, Plus, Search, Edit3, Trash2, RotateCcw,
+  Calendar, ClipboardList, Plus, Search, Edit3, Trash2, RotateCcw,
   Upload, Download, FileSpreadsheet, Loader2, AlertCircle,
-  CheckSquare, ChevronUp, ChevronDown, Check, X, Filter,
-  RefreshCw, ChevronLeft, ChevronRight, Archive, CheckCircle,
-  Activity, TrendingUp, ClipboardList
+  CheckSquare, ChevronUp, ChevronDown, BookOpen, Clock, Home, Users,
+  Activity, Archive, TrendingUp, X, Filter, RefreshCw, ChevronLeft, ChevronRight,
+  MapPin, CheckCircle
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
-interface SubjectExamMapping {
+interface ExamSchedule {
   id: number;
-  class_id: number;
-  class_name: string;
   examination_id: number;
   examination_name: string;
-  academic_year_id: number | null;
-  academic_year_name: string;
+  academic_year_id: number;
+  class_id: number;
+  class_name: string;
   subject_id: number;
   subject_name: string;
   subject_code: string;
+  exam_date: string;
+  start_time: string;
+  end_time: string;
+  room_no: string | null;
+  invigilator_teacher_id: number | null;
+  invigilator_name: string;
   max_marks: number;
   passing_marks: number;
-  weightage_percent: number;
   is_active: boolean;
   deleted_at?: string | null;
   created_at?: string;
@@ -53,6 +57,11 @@ interface SubjectOption {
   passing_marks: number;
 }
 
+interface TeacherOption {
+  id: number;
+  name: string;
+}
+
 interface MasterOption {
   value: string;
   label: string;
@@ -60,9 +69,9 @@ interface MasterOption {
 
 interface Stats {
   total: number;
-  classes: number;
-  active: number;
-  totalWeightage: number;
+  today: number;
+  invigilators: number;
+  rooms: number;
   trashed: number;
 }
 
@@ -151,20 +160,17 @@ const SSelect: React.FC<{
 const StatCard: React.FC<{
   label: string;
   value: number;
-  suffix?: string;
   icon: React.ReactNode;
   color: string;
   bg: string;
-}> = ({ label, value, suffix = '', icon, color, bg }) => (
+}> = ({ label, value, icon, color, bg }) => (
   <div className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border ${bg} min-w-0`}>
     <div className={`p-1.5 rounded-md ${color} flex-shrink-0`}>
       {icon}
     </div>
     <div className="min-w-0">
       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide truncate">{label}</p>
-      <p className="text-lg font-bold text-gray-800 leading-tight">
-        {value}{suffix}
-      </p>
+      <p className="text-lg font-bold text-gray-800 leading-tight">{value}</p>
     </div>
   </div>
 );
@@ -198,32 +204,33 @@ const SortTh: React.FC<{
 const EMPTY_FORM = {
   examination_id: '',
   subject_id: '',
+  exam_date: '',
+  start_time: '',
+  end_time: '',
+  room_no: '',
+  invigilator_teacher_id: '',
   max_marks: '',
   passing_marks: '',
-  weightage_percent: '100',
   is_active: true,
 };
 
-const statusOptions = [
-  { value: '1', label: 'Active' },
-  { value: '0', label: 'Inactive' },
-];
-
 /* ─────────────────────────────────────────────────────────────
-   MAIN COMPONENT
+   MAIN MODULE COMPONENT
 ───────────────────────────────────────────────────────────── */
-export default function SubjectExamMapping() {
-  const [mappings, setMappings] = useState<SubjectExamMapping[]>([]);
+  export default function ExamScheduleManager() {
+  const [schedules, setSchedules] = useState<ExamSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats>({ total: 0, classes: 0, active: 0, totalWeightage: 0, trashed: 0 });
+  const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
+  const [stats, setStats] = useState<Stats>({ total: 0, today: 0, invigilators: 0, rooms: 0, trashed: 0 });
 
-  /* ── masters metadata ── */
+  /* ── Master lists loaded from API ── */
   const [examinations, setExaminations] = useState<ExaminationOption[]>([]);
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [academicYears, setAcademicYears] = useState<MasterOption[]>([]);
   const [classes, setClasses] = useState<MasterOption[]>([]);
 
-  /* ── filters ── */
+  /* ── Filters ── */
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAcademicYear, setFilterAcademicYear] = useState('');
   const [filterClass, setFilterClass] = useState('');
@@ -232,25 +239,25 @@ export default function SubjectExamMapping() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showTrashed, setShowTrashed] = useState(false);
 
-  /* ── pagination ── */
+  /* ── Pagination ── */
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  /* ── sorting ── */
-  const [sortField, setSortField] = useState('id');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  /* ── Sorting ── */
+  const [sortField, setSortField] = useState('exam_date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  /* ── selection ── */
+  /* ── Selection ── */
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
-  /* ── add/edit modal ── */
+  /* ── Form Modal ── */
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<SubjectExamMapping | null>(null);
+  const [editingItem, setEditingItem] = useState<ExamSchedule | null>(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
   const [formSaving, setFormSaving] = useState(false);
 
-  /* ── import modal ── */
+  /* ── Excel Import ── */
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importRows, setImportRows] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
@@ -258,36 +265,47 @@ export default function SubjectExamMapping() {
   /* ════════════════ FETCH DATA ════════════════ */
   const fetchStats = useCallback(async () => {
     try {
-      const res = await api.get('/school/subject-exam-mappings/stats');
+      const res = await api.get('/school/exam-schedules/stats');
       if (res.data.success) setStats(res.data.data);
     } catch { /* silent */ }
   }, []);
 
-  const fetchMappings = useCallback(async () => {
+  const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/school/subject-exam-mappings', {
+      const res = await api.get('/school/exam-schedules', {
         params: { trashed: showTrashed ? '1' : '0' },
       });
-      if (res.data.success) setMappings(res.data.data || []);
+      if (res.data.success) setSchedules(res.data.data || []);
     } catch {
-      toast.error('Failed to load subject exam mappings');
+      toast.error('Failed to load exam schedules');
     }
     setLoading(false);
   }, [showTrashed]);
 
   const fetchMasters = useCallback(async () => {
     try {
-      const [exRes, subRes, ayRes, clRes] = await Promise.all([
+      const [exRes, subRes, tRes, ayRes, clRes] = await Promise.all([
         api.get('/school/examinations', { params: { trashed: '0' } }),
         api.get('/school/subjects', { params: { only_trashed: '0' } }),
+        api.get('/school/teachers', { params: { only_trashed: '0' } }),
         api.get('/school/academic-years'),
         api.get('/master/classes'),
       ]);
 
-      if (exRes.data.success) setExaminations(exRes.data.data || []);
-      if (subRes.data.success) setSubjects(subRes.data.data || []);
-
+      if (exRes.data.success) {
+        setExaminations(exRes.data.data || []);
+      }
+      if (subRes.data.success) {
+        setSubjects(subRes.data.data || []);
+      }
+      if (tRes.data.success) {
+        const arr = (tRes.data.data || []).map((t: any) => ({
+          id: t.id,
+          name: t.user ? `${t.user.first_name} ${t.user.last_name || ''}`.trim() : `Teacher ID: ${t.id}`
+        }));
+        setTeachers(arr);
+      }
       if (ayRes.data.success) {
         const data = ayRes.data.data;
         const arr = Array.isArray(data)
@@ -295,7 +313,6 @@ export default function SubjectExamMapping() {
           : Object.entries(data).map(([id, name]) => ({ value: id, label: name as string }));
         setAcademicYears(arr);
       }
-
       if (clRes.data.success) {
         const data = clRes.data.data;
         const arr = Array.isArray(data)
@@ -313,12 +330,12 @@ export default function SubjectExamMapping() {
   }, [fetchMasters]);
 
   useEffect(() => {
-    fetchMappings();
+    fetchSchedules();
     fetchStats();
     setSelectedIds([]);
-  }, [fetchMappings, fetchStats]);
+  }, [fetchSchedules, fetchStats]);
 
-  /* ── Auto marks set on subject select in add mode ── */
+  /* ── Auto-populate max/passing marks on subject change in add mode ── */
   useEffect(() => {
     if (!editingItem && formData.subject_id) {
       const sub = subjects.find(s => String(s.id) === formData.subject_id);
@@ -332,49 +349,34 @@ export default function SubjectExamMapping() {
     }
   }, [formData.subject_id, subjects, editingItem]);
 
-  /* ════════════════ DYNAMIC FORM FILTERS ════════════════ */
+  /* ════════════════ DYNAMIC FORM DROPDOWNS ════════════════ */
   const filteredSubjectsForForm = useMemo(() => {
     if (!formData.examination_id) return [];
-    const exam = examinations.find(e => String(e.id) === formData.examination_id);
-    if (!exam) return [];
-    return subjects.filter(s => String(s.class_id) === String(exam.class_id));
+    const selectedExam = examinations.find(e => String(e.id) === formData.examination_id);
+    if (!selectedExam) return [];
+    return subjects.filter(s => String(s.class_id) === String(selectedExam.class_id));
   }, [formData.examination_id, examinations, subjects]);
-
-  /* ════════════════ WEIGHTAGE MONITOR ════════════════ */
-  const totalWeightageForSelectedExam = useMemo(() => {
-    if (!filterExam) return null;
-    const matched = mappings.filter(m => String(m.examination_id) === filterExam && !m.deleted_at);
-    return matched.reduce((sum, m) => sum + m.weightage_percent, 0);
-  }, [filterExam, mappings]);
-
-  const examWeightageSumForForm = useMemo(() => {
-    if (!formData.examination_id || !isModalOpen) return 0;
-    const matched = mappings.filter(m => String(m.examination_id) === formData.examination_id && !m.deleted_at);
-    const existingSum = matched.reduce((sum, m) => {
-      if (editingItem && m.id === editingItem.id) return sum;
-      return sum + m.weightage_percent;
-    }, 0);
-    return existingSum + (Number(formData.weightage_percent) || 0);
-  }, [formData, mappings, editingItem, isModalOpen]);
 
   /* ════════════════ FILTER & SORT ════════════════ */
   const filtered = useMemo(() => {
-    let arr = [...mappings];
+    let arr = [...schedules];
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      arr = arr.filter(m =>
-        m.examination_name.toLowerCase().includes(q) ||
-        m.subject_name.toLowerCase().includes(q) ||
-        m.class_name.toLowerCase().includes(q)
+      arr = arr.filter(s =>
+        s.examination_name.toLowerCase().includes(q) ||
+        s.subject_name.toLowerCase().includes(q) ||
+        s.class_name.toLowerCase().includes(q) ||
+        (s.room_no || '').toLowerCase().includes(q) ||
+        s.invigilator_name.toLowerCase().includes(q)
       );
     }
 
-    if (filterAcademicYear) arr = arr.filter(m => String(m.academic_year_id) === filterAcademicYear);
-    if (filterClass) arr = arr.filter(m => String(m.class_id) === filterClass);
-    if (filterExam) arr = arr.filter(m => String(m.examination_id) === filterExam);
-    if (filterSubject) arr = arr.filter(m => String(m.subject_id) === filterSubject);
-    if (filterStatus !== '') arr = arr.filter(m => m.is_active === (filterStatus === '1'));
+    if (filterAcademicYear) arr = arr.filter(s => String(s.academic_year_id) === filterAcademicYear);
+    if (filterClass) arr = arr.filter(s => String(s.class_id) === filterClass);
+    if (filterExam) arr = arr.filter(s => String(s.examination_id) === filterExam);
+    if (filterSubject) arr = arr.filter(s => String(s.subject_id) === filterSubject);
+    if (filterStatus !== '') arr = arr.filter(s => s.is_active === (filterStatus === '1'));
 
     arr.sort((a: any, b: any) => {
       let va = a[sortField] ?? '';
@@ -386,7 +388,7 @@ export default function SubjectExamMapping() {
     });
 
     return arr;
-  }, [mappings, searchTerm, filterAcademicYear, filterClass, filterExam, filterSubject, filterStatus, sortField, sortDir]);
+  }, [schedules, searchTerm, filterAcademicYear, filterClass, filterExam, filterSubject, filterStatus, sortField, sortDir]);
 
   const totalPages = useMemo(() => itemsPerPage === -1 ? 1 : Math.ceil(filtered.length / itemsPerPage), [filtered, itemsPerPage]);
 
@@ -396,15 +398,16 @@ export default function SubjectExamMapping() {
     return filtered.slice(s, s + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  const isAllSelected = paginated.length > 0 && paginated.every(r => selectedIds.includes(r.id));
-  const handleSelectAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(paginated.map(r => r.id));
-  const handleSelectRow = (id: number) =>
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
+  /* ════════════════ SORT HANDLER ════════════════ */
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
   };
+
+  const isAllSelected = paginated.length > 0 && paginated.every(r => selectedIds.includes(r.id));
+  const handleSelectAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(paginated.map(r => r.id));
+  const handleSelectRow = (id: number) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const hasFilters = searchTerm || filterAcademicYear || filterClass || filterExam || filterSubject || filterStatus;
   const clearFilters = () => {
@@ -417,6 +420,40 @@ export default function SubjectExamMapping() {
     setCurrentPage(1);
   };
 
+  /* ════════════════ IN-FORM CONFLICT CHECKS (FRONTEND UX) ════════════════ */
+  const scheduleConflicts = useMemo(() => {
+    if (!formData.exam_date || !formData.start_time || !formData.end_time || !isModalOpen) return null;
+    const s1 = new Date(`1970-01-01T${formData.start_time}`).getTime();
+    const e1 = new Date(`1970-01-01T${formData.end_time}`).getTime();
+    if (isNaN(s1) || isNaN(e1) || s1 >= e1) return null;
+
+    const classIdOfExam = formData.examination_id ? examinations.find(e => String(e.id) === formData.examination_id)?.class_id : null;
+
+    for (const s of schedules) {
+      if (editingItem && s.id === editingItem.id) continue;
+      if (s.exam_date !== formData.exam_date) continue;
+
+      const s2 = new Date(`1970-01-01T${s.start_time}`).getTime();
+      const e2 = new Date(`1970-01-01T${s.end_time}`).getTime();
+
+      if (s1 < e2 && s2 < e1) {
+        // Room conflict
+        if (formData.room_no && s.room_no && formData.room_no.trim().toLowerCase() === s.room_no.trim().toLowerCase()) {
+          return `⚠️ Room "${s.room_no}" is already booked for ${s.examination_name} (${s.subject_name}) during this slot.`;
+        }
+        // Invigilator conflict
+        if (formData.invigilator_teacher_id && s.invigilator_teacher_id && String(formData.invigilator_teacher_id) === String(s.invigilator_teacher_id)) {
+          return `⚠️ Teacher is already scheduled for invigilation duty in Room ${s.room_no || 'N/A'}.`;
+        }
+        // Class conflict
+        if (classIdOfExam && s.class_id === classIdOfExam) {
+          return `⚠️ This class already has another examination scheduled during this time slot.`;
+        }
+      }
+    }
+    return null;
+  }, [formData, schedules, examinations, editingItem, isModalOpen]);
+
   /* ════════════════ CRUD ACTIONS ════════════════ */
   const openAdd = () => {
     setEditingItem(null);
@@ -424,14 +461,18 @@ export default function SubjectExamMapping() {
     setIsModalOpen(true);
   };
 
-  const openEdit = (item: SubjectExamMapping) => {
+  const openEdit = (item: ExamSchedule) => {
     setEditingItem(item);
     setFormData({
       examination_id: String(item.examination_id),
       subject_id: String(item.subject_id),
+      exam_date: item.exam_date || '',
+      start_time: item.start_time || '',
+      end_time: item.end_time || '',
+      room_no: item.room_no || '',
+      invigilator_teacher_id: String(item.invigilator_teacher_id || ''),
       max_marks: String(item.max_marks),
       passing_marks: String(item.passing_marks),
-      weightage_percent: String(item.weightage_percent),
       is_active: item.is_active,
     });
     setIsModalOpen(true);
@@ -439,7 +480,7 @@ export default function SubjectExamMapping() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.examination_id || !formData.subject_id || !formData.max_marks || !formData.passing_marks || !formData.weightage_percent) {
+    if (!formData.examination_id || !formData.subject_id || !formData.exam_date || !formData.start_time || !formData.end_time || !formData.max_marks || !formData.passing_marks) {
       toast.error('Please fill all required fields');
       return;
     }
@@ -452,74 +493,78 @@ export default function SubjectExamMapping() {
       const payload = {
         examination_id: Number(formData.examination_id),
         subject_id: Number(formData.subject_id),
+        exam_date: formData.exam_date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        room_no: formData.room_no ? formData.room_no.trim() : null,
+        invigilator_teacher_id: formData.invigilator_teacher_id ? Number(formData.invigilator_teacher_id) : null,
         max_marks: Number(formData.max_marks),
         passing_marks: Number(formData.passing_marks),
-        weightage_percent: Number(formData.weightage_percent),
         is_active: formData.is_active,
       };
 
       if (editingItem) {
-        await api.put(`/school/subject-exam-mappings/${editingItem.id}`, payload);
-        toast.success('Mapping updated successfully');
+        await api.put(`/school/exam-schedules/${editingItem.id}`, payload);
+        toast.success('Exam schedule updated successfully');
       } else {
-        await api.post('/school/subject-exam-mappings', payload);
-        toast.success('Subject mapped successfully');
+        await api.post('/school/exam-schedules', payload);
+        toast.success('Exam schedule created successfully');
       }
       setIsModalOpen(false);
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to save mapping');
+      toast.error(err?.response?.data?.message || 'Failed to save exam schedule');
     }
     setFormSaving(false);
   };
 
   const handleToggleStatus = async (id: number) => {
     try {
-      await api.patch(`/school/subject-exam-mappings/${id}/toggle-status`);
-      setMappings(prev => prev.map(m => m.id === id ? { ...m, is_active: !m.is_active } : m));
+      await api.patch(`/school/exam-schedules/${id}/toggle-status`);
+      setSchedules(prev => prev.map(s => s.id === id ? { ...s, is_active: !s.is_active } : s));
       fetchStats();
     } catch { toast.error('Toggle failed'); }
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Move mapping for "${name}" to trash?`)) return;
+    if (!window.confirm(`Move schedule for "${name}" to trash?`)) return;
     try {
-      await api.delete(`/school/subject-exam-mappings/${id}`);
+      await api.delete(`/school/exam-schedules/${id}`);
       toast.success('Moved to trash');
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Delete failed'); }
   };
 
   const handleRestore = async (id: number) => {
     try {
-      await api.post(`/school/subject-exam-mappings/${id}/restore`);
-      toast.success('Mapping restored');
-      fetchMappings();
+      await api.post(`/school/exam-schedules/${id}/restore`);
+      toast.success('Exam schedule restored');
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Restore failed'); }
   };
 
   const handleForceDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Permanently delete mapping for "${name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete schedule for "${name}"? This cannot be undone.`)) return;
     try {
-      await api.delete(`/school/subject-exam-mappings/${id}/force`);
+      await api.delete(`/school/exam-schedules/${id}/force`);
       toast.success('Permanently deleted');
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Force delete failed'); }
   };
 
-  /* ════════════════ BULK ACTIONS ════════════════ */
+  /* ════════════════ BULK OPERATIONS ════════════════ */
   const handleBulkStatus = async (status: boolean) => {
     if (!selectedIds.length) return;
     setBulkUpdating(true);
     try {
-      await api.post('/school/subject-exam-mappings/bulk-status', { ids: selectedIds, is_active: status });
-      toast.success(`${selectedIds.length} mapping(s) status updated`);
+      await api.post('/school/exam-schedules/bulk-status', { ids: selectedIds, is_active: status });
+      toast.success(`${selectedIds.length} schedule(s) status updated`);
       setSelectedIds([]);
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Bulk status update failed'); }
     setBulkUpdating(false);
@@ -528,15 +573,15 @@ export default function SubjectExamMapping() {
   const handleBulkDelete = async (force = false) => {
     if (!selectedIds.length) return;
     const msg = force
-      ? `Permanently delete ${selectedIds.length} mapping(s)? This cannot be undone.`
-      : `Move ${selectedIds.length} mapping(s) to trash?`;
+      ? `Permanently delete ${selectedIds.length} exam schedule(s)? This cannot be undone.`
+      : `Move ${selectedIds.length} exam schedule(s) to trash?`;
     if (!window.confirm(msg)) return;
     setBulkUpdating(true);
     try {
-      await api.post('/school/subject-exam-mappings/bulk-delete', { ids: selectedIds, force });
+      await api.post('/school/exam-schedules/bulk-delete', { ids: selectedIds, force });
       toast.success(force ? 'Permanently deleted' : 'Moved to trash');
       setSelectedIds([]);
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Bulk delete failed'); }
     setBulkUpdating(false);
@@ -546,10 +591,10 @@ export default function SubjectExamMapping() {
     if (!selectedIds.length) return;
     setBulkUpdating(true);
     try {
-      await api.post('/school/subject-exam-mappings/bulk-restore', { ids: selectedIds });
-      toast.success(`${selectedIds.length} mapping(s) restored`);
+      await api.post('/school/exam-schedules/bulk-restore', { ids: selectedIds });
+      toast.success(`${selectedIds.length} schedule(s) restored`);
       setSelectedIds([]);
-      fetchMappings();
+      fetchSchedules();
       fetchStats();
     } catch { toast.error('Bulk restore failed'); }
     setBulkUpdating(false);
@@ -559,17 +604,21 @@ export default function SubjectExamMapping() {
   const handleExport = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet('Subject Exam Mappings');
+      const sheet = workbook.addWorksheet('Exam Schedules');
       sheet.columns = [
         { header: 'ID', key: 'id', width: 6 },
-        { header: 'Class Name', key: 'class_name', width: 14 },
-        { header: 'Examination Name', key: 'examination_name', width: 28 },
-        { header: 'Subject Name', key: 'subject_name', width: 24 },
-        { header: 'Subject Code', key: 'subject_code', width: 14 },
-        { header: 'Max Marks', key: 'max_marks', width: 12 },
-        { header: 'Passing Marks', key: 'passing_marks', width: 14 },
-        { header: 'Weightage (%)', key: 'weightage_percent', width: 16 },
-        { header: 'Status', key: 'status', width: 12 },
+        { header: 'Examination', key: 'examination', width: 26 },
+        { header: 'Class', key: 'class', width: 12 },
+        { header: 'Subject', key: 'subject', width: 22 },
+        { header: 'Subject Code', key: 'code', width: 12 },
+        { header: 'Exam Date', key: 'date', width: 14 },
+        { header: 'Start Time', key: 'start', width: 12 },
+        { header: 'End Time', key: 'end', width: 12 },
+        { header: 'Room No', key: 'room', width: 12 },
+        { header: 'Invigilator', key: 'invigilator', width: 24 },
+        { header: 'Max Marks', key: 'max', width: 12 },
+        { header: 'Passing Marks', key: 'pass', width: 14 },
+        { header: 'Status', key: 'status', width: 10 },
       ];
       const headerRow = sheet.getRow(1);
       headerRow.eachCell(cell => {
@@ -582,19 +631,23 @@ export default function SubjectExamMapping() {
       filtered.forEach(row => {
         sheet.addRow({
           id: row.id,
-          class_name: row.class_name,
-          examination_name: row.examination_name,
-          subject_name: row.subject_name,
-          subject_code: row.subject_code,
-          max_marks: row.max_marks,
-          passing_marks: row.passing_marks,
-          weightage_percent: row.weightage_percent,
+          examination: row.examination_name,
+          class: row.class_name,
+          subject: row.subject_name,
+          code: row.subject_code,
+          date: row.exam_date,
+          start: row.start_time,
+          end: row.end_time,
+          room: row.room_no || 'N/A',
+          invigilator: row.invigilator_name,
+          max: row.max_marks,
+          pass: row.passing_marks,
           status: row.is_active ? 'Active' : 'Inactive',
         });
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), `subject_exam_mappings_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      saveAs(new Blob([buffer]), `exam_schedules_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
       toast.success('Exported successfully');
     } catch {
       toast.error('Export failed');
@@ -605,13 +658,17 @@ export default function SubjectExamMapping() {
   const handleSampleDownload = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet('Mappings Import');
+      const sheet = workbook.addWorksheet('Exam Schedules Import');
       sheet.columns = [
         { header: 'Examination ID *', key: 'examination_id', width: 16 },
         { header: 'Subject ID *', key: 'subject_id', width: 14 },
+        { header: 'Exam Date * (YYYY-MM-DD)', key: 'exam_date', width: 26 },
+        { header: 'Start Time * (HH:MM:SS)', key: 'start_time', width: 24 },
+        { header: 'End Time * (HH:MM:SS)', key: 'end_time', width: 24 },
+        { header: 'Room No', key: 'room_no', width: 14 },
+        { header: 'Invigilator Teacher ID', key: 'invigilator_teacher_id', width: 22 },
         { header: 'Max Marks *', key: 'max_marks', width: 12 },
         { header: 'Passing Marks *', key: 'passing_marks', width: 16 },
-        { header: 'Weightage Percent *', key: 'weightage_percent', width: 22 },
         { header: 'Status (Active/Inactive)', key: 'status', width: 24 },
       ];
       const headerRow = sheet.getRow(1);
@@ -624,21 +681,22 @@ export default function SubjectExamMapping() {
 
       const exId = examinations[0]?.id || 1;
       const subId = subjects[0]?.id || 1;
+      const teacherId = teachers[0]?.id || '';
 
       [
-        [exId, subId, 100, 33, 100, 'Active'],
-        [exId, subId, 50, 17, 50, 'Active'],
+        [exId, subId, '2026-04-10', '09:00:00', '12:00:00', 'Room 101', teacherId, 100, 33, 'Active'],
+        [exId, subId, '2026-04-12', '09:00:00', '12:00:00', 'Room 102', teacherId, 100, 33, 'Active'],
       ].forEach(row => sheet.addRow(row));
 
       const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), 'subject_exam_mappings_template.xlsx');
+      saveAs(new Blob([buffer]), 'exam_schedules_import_template.xlsx');
       toast.success('Sample template downloaded');
     } catch {
       toast.error('Download failed');
     }
   };
 
-  /* ════════════════ IMPORT PARSE ════════════════ */
+  /* ════════════════ IMPORT PARSING ════════════════ */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -666,17 +724,21 @@ export default function SubjectExamMapping() {
       const parsedData = importRows.map(row => ({
         examination_id: Number(row['Examination ID *'] || row['examination_id'] || 0),
         subject_id: Number(row['Subject ID *'] || row['subject_id'] || 0),
+        exam_date: String(row['Exam Date * (YYYY-MM-DD)'] || row['exam_date'] || ''),
+        start_time: String(row['Start Time * (HH:MM:SS)'] || row['start_time'] || ''),
+        end_time: String(row['End Time * (HH:MM:SS)'] || row['end_time'] || ''),
+        room_no: String(row['Room No'] || row['room_no'] || '').trim() || null,
+        invigilator_teacher_id: row['Invigilator Teacher ID'] || row['invigilator_teacher_id'] ? Number(row['Invigilator Teacher ID'] || row['invigilator_teacher_id']) : null,
         max_marks: Number(row['Max Marks *'] || row['max_marks'] || 100),
         passing_marks: Number(row['Passing Marks *'] || row['passing_marks'] || 33),
-        weightage_percent: Number(row['Weightage Percent *'] || row['weightage_percent'] || 100),
         is_active: String(row['Status (Active/Inactive)'] || row['status'] || 'Active').toLowerCase() !== 'inactive',
       }));
 
-      const res = await api.post('/school/subject-exam-mappings/bulk-import', { data: parsedData });
+      const res = await api.post('/school/exam-schedules/bulk-import', { data: parsedData });
       if (res.data.success) {
-        toast.success(`Import complete: ${res.data.imported_count} imported, ${res.data.error_count} failed.`);
+        toast.success(`Import Complete: ${res.data.imported_count} imported, ${res.data.error_count} failed.`);
         setIsImportOpen(false);
-        fetchMappings();
+        fetchSchedules();
         fetchStats();
       } else {
         toast.error(res.data.message || 'Import failed');
@@ -687,97 +749,114 @@ export default function SubjectExamMapping() {
     setImporting(false);
   };
 
-  /* ════════════════ DROPDOWN OPTION LISTS ════════════════ */
+  /* ════════════════ DATE & TIME FORMATTERS ════════════════ */
+  const formatDate = (d: string) => {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const formatTime = (t: string) => {
+    if (!t) return '';
+    const parts = t.split(':');
+    if (parts.length < 2) return t;
+    const hour = Number(parts[0]);
+    const min = parts[1];
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${min} ${ampm}`;
+  };
+
+  /* ════════════════ SELECT WRAPPER FORMATTERS ════════════════ */
   const examSelectOptions = useMemo(() => examinations.map(e => ({ value: String(e.id), label: `${e.class_name} - ${e.name}` })), [examinations]);
   const subjectSelectOptions = useMemo(() => subjects.map(s => ({ value: String(s.id), label: s.name })), [subjects]);
-  const formSubjectSelectOptions = useMemo(() => formSubjectsForFormSelectOptions(), [filteredSubjectsForForm]);
-
-  function formSubjectsForFormSelectOptions() {
-    return filteredSubjectsForForm.map(s => ({ value: String(s.id), label: `${s.name} (${s.code || 'N/A'})` }));
-  }
+  const formSubjectSelectOptions = useMemo(() => filteredSubjectsForForm.map(s => ({ value: String(s.id), label: `${s.name} (${s.code || 'N/A'})` })), [filteredSubjectsForForm]);
+  const teacherSelectOptions = useMemo(() => teachers.map(t => ({ value: String(t.id), label: t.name })), [teachers]);
+  const statusOptions: MasterOption[] = [
+    { value: '1', label: 'Active' },
+    { value: '0', label: 'Inactive' },
+  ];
 
   /* ════════════════ RENDER JSX ════════════════ */
   return (
     <div className="p-4 space-y-3 text-xs">
       
-      {/* ── Page Header ── */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-indigo-100 rounded-lg">
-            <Award className="w-4 h-4 text-indigo-600" />
+            <Calendar className="w-4 h-4 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-gray-900">Subject Exam Mapping</h1>
-            <p className="text-[10px] text-gray-500">Configure examination papers, maximum marks, passing scores and final weightages</p>
+            <h1 className="text-sm font-bold text-gray-900">Exam Schedule Management</h1>
+            <p className="text-[10px] text-gray-500">Configure dates, classrooms, invigilators and paper marks mapping</p>
           </div>
         </div>
-        <button
-          onClick={() => { fetchMappings(); fetchStats(); }}
-          className="flex items-center gap-1 px-2 py-1 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
-          title="Refresh"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-medium">Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Tab toggles */}
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`px-3 py-1 text-[10px] font-bold ${activeTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              List View
+            </button>
+            <button
+              onClick={() => setActiveTab('calendar')}
+              className={`px-3 py-1 text-[10px] font-bold ${activeTab === 'calendar' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              Timeline View
+            </button>
+          </div>
+          <button
+            onClick={() => { fetchSchedules(); fetchStats(); }}
+            className="flex items-center gap-1 px-2 py-1 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+            title="Refresh"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-medium">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         <StatCard
-          label="Total Mappings"
+          label="Total Schedules"
           value={stats.total}
           icon={<ClipboardList className="w-3.5 h-3.5 text-white" />}
           color="bg-indigo-500"
           bg="bg-indigo-50 border-indigo-100"
         />
         <StatCard
-          label="Classes Configured"
-          value={stats.classes}
-          icon={<TrendingUp className="w-3.5 h-3.5 text-white" />}
+          label="Exams Today"
+          value={stats.today}
+          icon={<Activity className="w-3.5 h-3.5 text-white" />}
           color="bg-green-500"
           bg="bg-green-50 border-green-100"
         />
         <StatCard
-          label="Active Mappings"
-          value={stats.active}
-          icon={<Activity className="w-3.5 h-3.5 text-white" />}
+          label="Invigilators"
+          value={stats.invigilators}
+          icon={<Users className="w-3.5 h-3.5 text-white" />}
+          color="bg-amber-500"
+          bg="bg-amber-50 border-amber-100"
+        />
+        <StatCard
+          label="Rooms Booked"
+          value={stats.rooms}
+          icon={<Home className="w-3.5 h-3.5 text-white" />}
           color="bg-blue-500"
           bg="bg-blue-50 border-blue-100"
         />
         <StatCard
-          label="Avg Weightage"
-          value={stats.total && Math.round(stats.totalWeightage / stats.total)}
-          suffix="%"
-          icon={<CheckCircle className="w-3.5 h-3.5 text-white" />}
-          color="bg-purple-500"
-          bg="bg-purple-50 border-purple-100"
-        />
-        <StatCard
-          label="Trashed Mappings"
+          label="Trashed"
           value={stats.trashed}
           icon={<Archive className="w-3.5 h-3.5 text-white" />}
           color="bg-red-500"
           bg="bg-red-50 border-red-100"
         />
       </div>
-
-      {/* ── Weightage Monitor Bar ── */}
-      {filterExam && totalWeightageForSelectedExam !== null && (
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg text-indigo-800">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <AlertCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-            <span className="font-semibold truncate">
-              Total mapped weightage for this exam: <strong className="text-indigo-950 font-bold">{totalWeightageForSelectedExam}%</strong>
-            </span>
-          </div>
-          <div className="w-32 bg-gray-200 h-2 rounded-full overflow-hidden flex-shrink-0">
-            <div
-              className={`h-full ${totalWeightageForSelectedExam > 100 ? 'bg-red-500' : 'bg-indigo-600'}`}
-              style={{ width: `${Math.min(totalWeightageForSelectedExam, 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* ── Primary Toolbar ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 px-2.5 py-2 rounded-lg border border-gray-200">
@@ -787,7 +866,7 @@ export default function SubjectExamMapping() {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search mappings..."
+              placeholder="Search schedule list..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-6 pr-2 py-1 text-[11px] border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none bg-white h-7 w-44"
@@ -799,7 +878,7 @@ export default function SubjectExamMapping() {
             )}
           </div>
 
-          {/* Items per page select */}
+          {/* Items Limit */}
           <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-1.5 py-0.5 h-7">
             <select
               value={itemsPerPage}
@@ -825,12 +904,12 @@ export default function SubjectExamMapping() {
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Right buttons */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleSampleDownload}
             className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-100 transition text-[11px] font-medium h-7"
-            title="Download template"
+            title="Download sample template"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             Sample
@@ -877,13 +956,13 @@ export default function SubjectExamMapping() {
           </button>
         )}
         <span className="ml-auto text-[10px] text-gray-400 font-medium">
-          {filtered.length} mapping{filtered.length !== 1 ? 's' : ''} found
+          {filtered.length} paper{filtered.length !== 1 ? 's' : ''} scheduled
         </span>
       </div>
 
       {/* ── Bulk Actions Bar ── */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg text-[11px] text-indigo-800">
+        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg text-[11px] text-indigo-800 animate-fade-in">
           <div className="flex items-center gap-1.5">
             <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
             <span className="font-semibold">{selectedIds.length} selected</span>
@@ -941,122 +1020,189 @@ export default function SubjectExamMapping() {
         </div>
       )}
 
-      {/* ── Table ── */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="flex items-center justify-center py-12 gap-2 text-gray-500">
-            <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-            <span className="text-sm font-medium">Loading mappings...</span>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-[11px]">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px] tracking-wide">
-                  <th className="py-2 px-2.5 w-7">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
-                    />
-                  </th>
-                  <th className="py-2 px-2.5 w-8 text-center">#</th>
-                  <SortTh field="examination_name" label="Examination" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                  <SortTh field="class_name" label="Class" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                  <SortTh field="subject_name" label="Subject" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                  <SortTh field="max_marks" label="Max Marks" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right" />
-                  <SortTh field="passing_marks" label="Passing Marks" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right" />
-                  <SortTh field="weightage_percent" label="Weightage" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right w-24" />
-                  <SortTh field="is_active" label="Status" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-center w-24" />
-                  <th className="py-2 px-2.5 text-center w-20">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-12 text-center text-gray-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <BookOpen className="w-8 h-8 text-gray-300" />
-                        <p className="font-semibold text-gray-600">No subject mapping records found</p>
-                        <p className="text-[10px] text-gray-400">Map subjects to examinations to populate records.</p>
-                      </div>
-                    </td>
+      {/* ── Tab Views ── */}
+      {activeTab === 'list' ? (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-gray-500">
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+              <span className="text-sm font-medium">Loading schedules...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[11px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px] tracking-wide">
+                    <th className="py-2 px-2.5 w-7">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
+                      />
+                    </th>
+                    <th className="py-2 px-2.5 w-8 text-center">#</th>
+                    <SortTh field="examination_name" label="Examination" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortTh field="class_name" label="Class" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortTh field="subject_name" label="Subject" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortTh field="exam_date" label="Exam Date" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <th className="py-2 px-2.5">Time</th>
+                    <SortTh field="room_no" label="Room" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortTh field="invigilator_name" label="Invigilator" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                    <SortTh field="max_marks" label="Max Marks" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right" />
+                    <SortTh field="passing_marks" label="Passing Marks" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right" />
+                    <SortTh field="is_active" label="Status" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-center w-24" />
+                    <th className="py-2 px-2.5 text-center w-20">Actions</th>
                   </tr>
-                ) : (
-                  paginated.map((item, idx) => (
-                    <tr key={item.id} className={`hover:bg-indigo-50/30 transition ${selectedIds.includes(item.id) ? 'bg-indigo-50/50' : ''}`}>
-                      <td className="py-1.5 px-2.5">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => handleSelectRow(item.id)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
-                        />
-                      </td>
-                      <td className="py-1.5 px-2.5 text-center text-gray-400 font-mono">
-                        {itemsPerPage === -1 ? idx + 1 : (currentPage - 1) * itemsPerPage + idx + 1}
-                      </td>
-                      <td className="py-1.5 px-2.5 font-semibold text-gray-900">{item.examination_name}</td>
-                      <td className="py-1.5 px-2.5 font-medium text-gray-800">{item.class_name}</td>
-                      <td className="py-1.5 px-2.5 font-semibold text-gray-900">
-                        <div className="flex flex-col">
-                          <span>{item.subject_name}</span>
-                          <span className="text-[9px] text-gray-400 font-normal">{item.subject_code}</span>
-                        </div>
-                      </td>
-                      <td className="py-1.5 px-2.5 text-right font-bold text-gray-800">{item.max_marks}</td>
-                      <td className="py-1.5 px-2.5 text-right text-gray-600">{item.passing_marks}</td>
-                      <td className="py-1.5 px-2.5 text-right text-indigo-600 font-bold">{item.weightage_percent}%</td>
-                      <td className="py-1.5 px-2.5 text-center">
-                        {!item.deleted_at ? (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <ToggleSwitch
-                              checked={item.is_active}
-                              onChange={() => handleToggleStatus(item.id)}
-                            />
-                            <span className={`text-[10px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
-                              {item.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-semibold">Trashed</span>
-                        )}
-                      </td>
-                      <td className="py-1.5 px-2.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {!item.deleted_at ? (
-                            <>
-                              <button onClick={() => openEdit(item)} className="p-1 text-indigo-500 hover:bg-indigo-100 rounded transition" title="Edit">
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => handleDelete(item.id, item.subject_name)} className="p-1 text-red-500 hover:bg-red-100 rounded transition" title="Move to Trash">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button onClick={() => handleRestore(item.id)} className="p-1 text-green-600 hover:bg-green-100 rounded transition" title="Restore">
-                                <RotateCcw className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => handleForceDelete(item.id, item.subject_name)} className="p-1 text-red-600 hover:bg-red-100 rounded transition" title="Delete Permanently">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginated.length === 0 ? (
+                    <tr>
+                      <td colSpan={13} className="py-12 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                          <ClipboardList className="w-8 h-8 text-gray-300" />
+                          <p className="font-semibold text-gray-600">No schedules found</p>
+                          <p className="text-[10px] text-gray-400">Add a schedule or clear filters to view results.</p>
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  ) : (
+                    paginated.map((item, idx) => (
+                      <tr key={item.id} className={`hover:bg-indigo-50/30 transition ${selectedIds.includes(item.id) ? 'bg-indigo-50/50' : ''}`}>
+                        <td className="py-1.5 px-2.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(item.id)}
+                            onChange={() => handleSelectRow(item.id)}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
+                          />
+                        </td>
+                        <td className="py-1.5 px-2.5 text-center text-gray-400 font-mono">
+                          {itemsPerPage === -1 ? idx + 1 : (currentPage - 1) * itemsPerPage + idx + 1}
+                        </td>
+                        <td className="py-1.5 px-2.5 font-semibold text-gray-900">{item.examination_name}</td>
+                        <td className="py-1.5 px-2.5 font-medium text-gray-800">{item.class_name}</td>
+                        <td className="py-1.5 px-2.5">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-800">{item.subject_name}</span>
+                            <span className="text-[9px] text-gray-400">{item.subject_code}</span>
+                          </div>
+                        </td>
+                        <td className="py-1.5 px-2.5 text-gray-600 font-medium">{formatDate(item.exam_date)}</td>
+                        <td className="py-1.5 px-2.5 text-gray-600 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100 font-mono text-[10px]">
+                            <Clock className="w-3 h-3 text-indigo-400" />
+                            {formatTime(item.start_time)} - {formatTime(item.end_time)}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-2.5 font-semibold text-indigo-600">
+                          {item.room_no ? (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 rounded border border-indigo-100 text-[10px]">
+                              <MapPin className="w-3 h-3 text-indigo-400" />
+                              {item.room_no}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="py-1.5 px-2.5 text-gray-700 font-medium">{item.invigilator_name || '—'}</td>
+                        <td className="py-1.5 px-2.5 text-right font-semibold text-gray-900">{item.max_marks}</td>
+                        <td className="py-1.5 px-2.5 text-right text-gray-600">{item.passing_marks}</td>
+                        <td className="py-1.5 px-2.5 text-center">
+                          {!item.deleted_at ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <ToggleSwitch
+                                checked={item.is_active}
+                                onChange={() => handleToggleStatus(item.id)}
+                              />
+                              <span className={`text-[10px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                                {item.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-semibold">Trashed</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2.5 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {!item.deleted_at ? (
+                              <>
+                                <button onClick={() => openEdit(item)} className="p-1 text-indigo-500 hover:bg-indigo-100 rounded transition" title="Edit">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => handleDelete(item.id, item.subject_name)} className="p-1 text-red-500 hover:bg-red-100 rounded transition" title="Move to Trash">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => handleRestore(item.id)} className="p-1 text-green-600 hover:bg-green-100 rounded transition" title="Restore">
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => handleForceDelete(item.id, item.subject_name)} className="p-1 text-red-600 hover:bg-red-100 rounded transition" title="Delete Permanently">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── Timeline / Calendar Grid view ── */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-gray-500 bg-white border border-gray-200 rounded-lg">
+              No schedules to display on timeline.
+            </div>
+          ) : (
+            filtered.map(item => (
+              <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden p-3.5 space-y-2 border-t-4 border-t-indigo-500">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-gray-800 text-xs">{item.examination_name}</h4>
+                    <p className="text-[10px] text-gray-400 font-semibold uppercase">{item.class_name}</p>
+                  </div>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[9px] font-bold">
+                    {item.subject_code}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="font-medium">{formatDate(item.exam_date)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="font-mono">{formatTime(item.start_time)} - {formatTime(item.end_time)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Home className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Room: <strong className="text-gray-800 font-semibold">{item.room_no || 'N/A'}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Users className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Invigilator: <strong className="text-gray-800 font-medium">{item.invigilator_name || 'N/A'}</strong></span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-100">
+                  <span>Marks: <strong>{item.passing_marks}/{item.max_marks}</strong></span>
+                  <span className={`font-semibold ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                    {item.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* ── Pagination ── */}
-      {!loading && totalPages > 1 && itemsPerPage !== -1 && (
+      {activeTab === 'list' && !loading && totalPages > 1 && itemsPerPage !== -1 && (
         <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[11px]">
           <p className="text-gray-500">
             Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * itemsPerPage + 1}</span>–
@@ -1102,10 +1248,10 @@ export default function SubjectExamMapping() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="p-1 bg-white/20 rounded">
-                    <BookOpen className="w-4 h-4 text-white" />
+                    <Calendar className="w-4 h-4 text-white" />
                   </div>
                   <h3 className="text-sm font-bold text-white">
-                    {editingItem ? 'Edit Subject Mapping' : 'Map Subject to Exam'}
+                    {editingItem ? 'Edit Exam Schedule' : 'Add Exam Schedule'}
                   </h3>
                 </div>
                 <button onClick={() => setIsModalOpen(false)} className="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1 transition">
@@ -1114,9 +1260,9 @@ export default function SubjectExamMapping() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs">
+            <form onSubmit={handleSubmit} className="p-4 space-y-3 text-xs">
               
-              {/* Examination Select */}
+              {/* Row 1: Examination Select */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                   Examination Name <span className="text-red-500">*</span>
@@ -1131,7 +1277,7 @@ export default function SubjectExamMapping() {
                 />
               </div>
 
-              {/* Subject Select */}
+              {/* Row 2: Subject Select */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                   Subject <span className="text-red-500">*</span>
@@ -1146,7 +1292,72 @@ export default function SubjectExamMapping() {
                 />
               </div>
 
-              {/* Max Marks & Passing Marks */}
+              {/* Row 3: Date, Start & End Time */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
+                    Exam Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.exam_date}
+                    onChange={e => setFormData(p => ({ ...p, exam_date: e.target.value }))}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
+                    Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.start_time}
+                    onChange={e => setFormData(p => ({ ...p, start_time: e.target.value }))}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
+                    End Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.end_time}
+                    min={formData.start_time}
+                    onChange={e => setFormData(p => ({ ...p, end_time: e.target.value }))}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Room No & Invigilator Teacher */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Room No</label>
+                  <input
+                    type="text"
+                    value={formData.room_no}
+                    onChange={e => setFormData(p => ({ ...p, room_no: e.target.value }))}
+                    placeholder="e.g. Hall A, Room 101"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Invigilator</label>
+                  <SSelect
+                    options={teacherSelectOptions}
+                    value={formData.invigilator_teacher_id}
+                    onChange={v => setFormData(p => ({ ...p, invigilator_teacher_id: v }))}
+                    placeholder="Select Teacher"
+                    className="w-full text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: Max Marks + Passing Marks */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
@@ -1180,43 +1391,24 @@ export default function SubjectExamMapping() {
                 </div>
               </div>
 
-              {/* Weightage Percent & Active Toggle switch */}
-              <div className="grid grid-cols-3 gap-3 items-end">
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
-                    Weightage Percent <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.weightage_percent}
-                    onChange={e => setFormData(p => ({ ...p, weightage_percent: e.target.value }))}
-                    placeholder="100"
-                    min={0}
-                    max={100}
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-200 h-[34px]">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">Active</span>
-                  <ToggleSwitch
-                    checked={formData.is_active}
-                    onChange={() => setFormData(p => ({ ...p, is_active: !p.is_active }))}
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic weightage limits indicator box */}
-              {formData.examination_id && (
-                <div className={`p-2 rounded border text-[10px] font-semibold flex items-center gap-1.5 ${examWeightageSumForForm > 100 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
-                  <AlertCircle className={`w-3.5 h-3.5 ${examWeightageSumForForm > 100 ? 'text-red-600' : 'text-green-600'}`} />
-                  <span>
-                    Total mapped weightage for this exam: <strong>{examWeightageSumForForm}%</strong> / 100%
-                  </span>
+              {/* Conflict Warnings UI Warning Box */}
+              {scheduleConflicts && (
+                <div className="flex items-center gap-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-amber-800 text-[10px] font-semibold animate-pulse">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                  <span>{scheduleConflicts}</span>
                 </div>
               )}
 
-              {/* Buttons */}
+              {/* Row 6: Active Status row */}
+              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Active Status</span>
+                <ToggleSwitch
+                  checked={formData.is_active}
+                  onChange={() => setFormData(p => ({ ...p, is_active: !p.is_active }))}
+                />
+              </div>
+
+              {/* Modal buttons */}
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
@@ -1233,7 +1425,7 @@ export default function SubjectExamMapping() {
                   {formSaving ? (
                     <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</>
                   ) : (
-                    <>{editingItem ? 'Update Mapping' : 'Save Mapping'}</>
+                    <>{editingItem ? 'Update Schedule' : 'Schedule Exam'}</>
                   )}
                 </button>
               </div>
@@ -1250,7 +1442,7 @@ export default function SubjectExamMapping() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Upload className="w-4 h-4 text-white" />
-                  <h3 className="text-sm font-bold text-white">Import Mappings</h3>
+                  <h3 className="text-sm font-bold text-white">Import Exam Schedules</h3>
                 </div>
                 <button onClick={() => setIsImportOpen(false)} className="text-white hover:bg-white/20 rounded-lg p-1">
                   <X className="w-4 h-4" />
@@ -1285,7 +1477,7 @@ export default function SubjectExamMapping() {
             <div className="border-t border-gray-200 px-5 py-3 flex justify-end gap-2 flex-shrink-0">
               <button onClick={() => setIsImportOpen(false)} className="px-4 py-1.5 border border-gray-300 rounded text-xs">Cancel</button>
               <button onClick={handleImportSubmit} disabled={importing} className="px-5 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold">
-                {importing ? 'Importing...' : `Import ${importRows.length} Mappings`}
+                {importing ? 'Importing...' : `Import ${importRows.length} Records`}
               </button>
             </div>
           </div>
