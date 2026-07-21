@@ -1350,6 +1350,14 @@ function AppContent() {
         }
       />
       <Route
+        path="/fees/setup"
+        element={
+          <ProtectedRouteWithLayout>
+            <FeeMasterSetup />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
         path="/fees/head"
         element={
           <ProtectedRouteWithLayout>

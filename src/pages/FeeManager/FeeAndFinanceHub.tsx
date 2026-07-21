@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  DollarSign, CreditCard, TrendingUp, TrendingDown,
-  Percent, Calendar, Download, Search, Plus, Trash2,
-  Edit3, CheckCircle, AlertCircle, X, Printer, FileText,
-  Briefcase, ShieldAlert, Award, Compass, Truck, Home,
-  FolderMinus, Landmark, RefreshCw
+  DollarSign, TrendingUp, TrendingDown,
+  Download, Search, Plus, Trash2,
+  Edit3, CheckCircle, AlertCircle, X, Printer,
+  ShieldAlert, Award
 } from 'lucide-react';
 
 export default function FeeAndFinanceHub() {
@@ -48,7 +47,7 @@ export default function FeeAndFinanceHub() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit'>('add');
-  const [activeItem, setActiveItem] = useState<any>(null);
+  const [_activeItem, setActiveItem] = useState<any>(null);
 
   // Form Fields State
   const [formFields, setFormFields] = useState<any>({
@@ -64,7 +63,7 @@ export default function FeeAndFinanceHub() {
   });
 
   // Dummy Master Data
-  const [feeHeads, setFeeHeads] = useState([
+  const [feeHeads] = useState([
     { id: 1, name: 'Tuition Fee', type: 'Academic', code: 'TUIT', frequency: 'Monthly', amount: 3500 },
     { id: 2, name: 'Registration Fee', type: 'Admission', code: 'REG', frequency: 'One Time', amount: 5000 },
     { id: 3, name: 'Laboratory Fee', type: 'Academic', code: 'LAB', frequency: 'Term Wise', amount: 1500 },
@@ -72,13 +71,13 @@ export default function FeeAndFinanceHub() {
     { id: 5, name: 'Library Fee', type: 'Academic', code: 'LIB', frequency: 'Yearly', amount: 1000 },
   ]);
 
-  const [feeStructures, setFeeStructures] = useState([
+  const [feeStructures] = useState([
     { id: 1, name: 'Primary Class Structure (LKG-V)', totalAmount: 45000, headsCount: 4, isDefault: true },
     { id: 2, name: 'Middle Class Structure (VI-VIII)', totalAmount: 58000, headsCount: 5, isDefault: false },
     { id: 3, name: 'Senior Class Structure (IX-XII)', totalAmount: 72000, headsCount: 6, isDefault: false },
   ]);
 
-  const [transactions, setTransactions] = useState([
+  const [transactions] = useState([
     { id: 1, studentName: 'Rahul Sharma', rollNo: '1004', class: 'Class 10', receiptNo: 'RCP-8921', amount: 8500, date: '2026-06-24', mode: 'Cash', status: 'Paid' },
     { id: 2, studentName: 'Ananya Verma', rollNo: '1012', class: 'Class 9', receiptNo: 'RCP-8922', amount: 12000, date: '2026-06-24', mode: 'Online', status: 'Paid' },
     { id: 3, studentName: 'Arjun Das', rollNo: '1025', class: 'Class 10', receiptNo: 'RCP-8923', amount: 3500, date: '2026-06-23', mode: 'Cheque', status: 'Pending Verification' },
@@ -86,26 +85,26 @@ export default function FeeAndFinanceHub() {
     { id: 5, studentName: 'Vikas Kumar', rollNo: '1044', class: 'Class 10', receiptNo: 'RCP-8925', amount: 6200, date: '2026-06-22', mode: 'Cash', status: 'Failed' },
   ]);
 
-  const [expenses, setExpenses] = useState([
+  const [expenses] = useState([
     { id: 1, title: 'Office Stationery Purchase', category: 'Administrative', amount: 4500, date: '2026-06-25', paidTo: 'Metro Book Depot', status: 'Paid' },
     { id: 2, title: 'Science Lab Equipment', category: 'Academic', amount: 28500, date: '2026-06-23', paidTo: 'SciTech Instruments', status: 'Paid' },
     { id: 3, title: 'Generator Diesel Fill', category: 'Utility', amount: 8000, date: '2026-06-22', paidTo: 'Bharat Petroleum', status: 'Paid' },
     { id: 4, title: 'Server Hosting & SSL Renewal', category: 'IT Support', amount: 15400, date: '2026-06-20', paidTo: 'Hostinger India', status: 'Paid' },
   ]);
 
-  const [scholarships, setScholarships] = useState([
+  const [scholarships] = useState([
     { id: 1, studentName: 'Priyan Singh', class: 'Class 10', schemeName: 'Merit-Cum-Means Scholarship', percentage: 50, amount: 22500, status: 'Approved' },
     { id: 2, studentName: 'Kabir Dev', class: 'Class 9', schemeName: 'Sports Achiever Concession', percentage: 100, amount: 58000, status: 'Approved' },
     { id: 3, studentName: 'Riya Sen', class: 'Class 11', schemeName: 'Single Girl Child Grant', percentage: 25, amount: 18000, status: 'Pending Review' },
   ]);
 
-  const [dueFees, setDueFees] = useState([
+  const [dueFees] = useState([
     { id: 1, studentName: 'Amit Mishra', class: 'Class 10', totalDue: 14500, dueDate: '2026-06-15', fineAmount: 250, mobile: '9876543210' },
     { id: 2, studentName: 'Neha Rajput', class: 'Class 9', totalDue: 8200, dueDate: '2026-06-15', fineAmount: 150, mobile: '9876543211' },
     { id: 3, studentName: 'Siddharth Rao', class: 'Class 10', totalDue: 22000, dueDate: '2026-06-10', fineAmount: 500, mobile: '9876543212' },
   ]);
 
-  const [budgets, setBudgets] = useState([
+  const [budgets] = useState([
     { id: 1, department: 'Academic Development', allocated: 250000, utilized: 128000, balance: 122000, fiscalYear: '2026-27' },
     { id: 2, Infrastructure: 'Classroom & Repair', allocated: 400000, utilized: 350000, balance: 50000, fiscalYear: '2026-27' },
     { id: 3, 'Sports & Events': 150000, allocated: 150000, utilized: 45000, balance: 105000, fiscalYear: '2026-27' },
@@ -178,7 +177,7 @@ export default function FeeAndFinanceHub() {
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (_id: number) => {
     toast.error('Record deleted successfully');
   };
 

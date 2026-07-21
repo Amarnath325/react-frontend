@@ -286,7 +286,7 @@ function PaymentModal({ open, onClose, onSaved, record, masters }: {
     if (opt?.value && opt.class_id) {
       try {
         const r = await api.get(`/school/fee-structures/by-class/${opt.class_id}`);
-        setStructureOpts((r.data.data ?? []).map((s: any) => ({ value: s.id, label: `${s.feeHead?.m_name ?? s.fee_head_label} — ₹${s.amount} (${s.frequencyMaster?.m_name ?? s.frequency_label})`, amount: s.amount })));
+        setStructureOpts((r.data.data ?? []).map((s: any) => ({ value: s.id, label: `${s.feeHead?.name ?? s.fee_head_label} — ₹${s.amount} (${s.frequencyMaster?.m_name ?? s.frequency_label})`, amount: s.amount })));
       } catch {}
     }
   };

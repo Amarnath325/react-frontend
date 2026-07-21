@@ -129,6 +129,7 @@ const routePermissionMap: { [key: string]: string } = {
   // Fee & Finance
   '/fees/dashboard': 'view_finance',
   '/fees/setup': 'setup_fees',
+  '/fees/master-setup': 'setup_fees',
   '/fees/head': 'setup_fees',
   '/fees/structure': 'setup_fees',
   '/fees/class-wise': 'setup_fees',

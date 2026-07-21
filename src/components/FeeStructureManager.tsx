@@ -139,6 +139,7 @@ const FeeStructureManager: React.FC = () => {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [filteredData, setFilteredData] = useState<FeeStructure[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewTrash, setViewTrash] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FeeStructure | null>(null);
@@ -206,6 +207,10 @@ const FeeStructureManager: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    fetchFeeStructures();
+  }, [viewTrash]);
+
+  useEffect(() => {
     applyFiltersAndSorting();
   }, [feeStructures, searchTerm, filterAcademicYear, filterClass, filterFeeHead, filterStatus, sortColumn, sortDirection]);
 
@@ -228,7 +233,9 @@ const FeeStructureManager: React.FC = () => {
 
   const fetchFeeStructures = async () => {
     try {
-      const response = await api.get('/school/fee-structures');
+      const response = await api.get('/school/fee-structures', {
+        params: { only_trashed: viewTrash ? 1 : 0 }
+      });
       if (response.data.success) {
         setFeeStructures(response.data.data);
       }
@@ -241,7 +248,7 @@ const FeeStructureManager: React.FC = () => {
   const fetchMasterData = async () => {
     try {
       const [feeHeadsRes, frequenciesRes] = await Promise.all([
-        api.get('/master/fee-types'),
+        api.get('/school/fee-heads', { params: { per_page: 1000, is_active: 1 } }),
         api.get('/master/fee-frequencies'),
       ]);
 
@@ -406,8 +413,12 @@ const FeeStructureManager: React.FC = () => {
   };
 
   const getSortIcon = (column: string) => {
-    if (sortColumn !== column) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
+    const isActive = sortColumn === column;
+    return (
+      <span className={`inline-flex items-center justify-center w-3.5 h-3.5 ml-1 rounded text-[8px] font-bold ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+        {isActive ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+      </span>
+    );
   };
 
   const clearFilters = () => {
@@ -575,15 +586,41 @@ const FeeStructureManager: React.FC = () => {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (window.confirm(`Are you sure you want to delete this fee structure?`)) {
+    if (window.confirm(`Are you sure you want to move the fee structure for "${name}" to trash?`)) {
       try {
         const response = await api.delete(`/school/fee-structures/${id}`);
         if (response.data.success) {
-          toast.success('Fee structure deleted successfully');
+          toast.success('Fee structure moved to trash');
           fetchFeeStructures();
         }
       } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Delete failed');
+        toast.error(error.response?.data?.message || 'Failed to move to trash');
+      }
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      const response = await api.post(`/school/fee-structures/${id}/restore`);
+      if (response.data.success) {
+        toast.success('Fee structure restored successfully');
+        fetchFeeStructures();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Restore failed');
+    }
+  };
+
+  const handleForceDelete = async (id: number, name: string) => {
+    if (window.confirm(`Are you sure you want to PERMANENTLY delete the fee structure for "${name}"? This cannot be undone.`)) {
+      try {
+        const response = await api.delete(`/school/fee-structures/${id}/force`);
+        if (response.data.success) {
+          toast.success('Fee structure deleted permanently');
+          fetchFeeStructures();
+        }
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Permanent deletion failed');
       }
     }
   };
@@ -625,37 +662,83 @@ const FeeStructureManager: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to ${status ? 'activate' : 'deactivate'} ${selectedItems.size} selected fee structure(s)?`)) {
+    if (!window.confirm(`Are you sure you want to ${status ? 'activate' : 'deactivate'} ${selectedItems.size} selected item(s)?`)) {
       return;
     }
 
     setBulkUpdating(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const id of selectedItems) {
-      try {
-        const response = await api.patch(`/school/fee-structures/${id}/toggle-status`, { 
-          is_active: status 
-        });
-        if (response.data.success) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch (error) {
-        errorCount++;
+    try {
+      const response = await api.post('/school/fee-structures/bulk-status', {
+        ids: Array.from(selectedItems),
+        is_active: status ? 1 : 0
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Status updated successfully');
+        setSelectedItems(new Set());
+        fetchFeeStructures();
       }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bulk update failed');
+    } finally {
+      setBulkUpdating(false);
     }
+  };
 
-    setBulkUpdating(false);
-    if (successCount > 0) {
-      toast.success(`${successCount} fee structure(s) updated successfully`);
-      setSelectedItems(new Set());
-      fetchFeeStructures();
+  const handleBulkTrash = async () => {
+    if (selectedItems.size === 0) return;
+    if (!window.confirm(`Move ${selectedItems.size} selected item(s) to trash?`)) return;
+
+    setBulkUpdating(true);
+    try {
+      const response = await api.post('/school/fee-structures/bulk-trash', {
+        ids: Array.from(selectedItems)
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Items moved to trash');
+        setSelectedItems(new Set());
+        fetchFeeStructures();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bulk trash failed');
+    } finally {
+      setBulkUpdating(false);
     }
-    if (errorCount > 0) {
-      toast.error(`Failed to update ${errorCount} fee structure(s)`);
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedItems.size === 0) return;
+    try {
+      const response = await api.post('/school/fee-structures/bulk-restore', {
+        ids: Array.from(selectedItems)
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Restored selection successfully');
+        setSelectedItems(new Set());
+        fetchFeeStructures();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bulk restore failed');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+    if (!window.confirm(`PERMANENTLY delete the ${selectedItems.size} selected item(s)? This action CANNOT be undone.`)) return;
+
+    setBulkUpdating(true);
+    try {
+      const response = await api.post('/school/fee-structures/bulk-delete', {
+        ids: Array.from(selectedItems)
+      });
+      if (response.data.success) {
+        toast.success(response.data.message || 'Selection permanently deleted');
+        setSelectedItems(new Set());
+        fetchFeeStructures();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bulk delete failed');
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
@@ -942,6 +1025,7 @@ const FeeStructureManager: React.FC = () => {
 
   const processImport = async () => {
     setImporting(true);
+    setImportProgress(0);
     let successCount = 0;
     let errorCount = 0;
     const errors: any[] = [];
@@ -950,6 +1034,9 @@ const FeeStructureManager: React.FC = () => {
     for (let i = 0; i < importData.length; i++) {
       const row = importData[i];
       const rowNum = i + 2;
+      
+      const percent = Math.round((i / importData.length) * 100);
+      setImportProgress(percent);
 
       try {
         // Skip rows that are list headers or empty
@@ -1091,6 +1178,7 @@ const FeeStructureManager: React.FC = () => {
       fetchFeeStructures();
     }
     
+    setImportProgress(100);
     setImporting(false);
   };
 
@@ -1139,13 +1227,13 @@ const FeeStructureManager: React.FC = () => {
         });
 
         // Style error row - red background for error column
-        row.cells[10].fill = {
+        row.getCell(11).fill = {
           type: 'pattern',
           pattern: 'solid',
           fgColor: { argb: 'FFFF0000' },
           bgColor: { argb: 'FF0000' }
         };
-        row.cells[10].font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        row.getCell(11).font = { color: { argb: 'FFFFFFFF' }, bold: true };
       });
 
       // Style header row
@@ -1269,7 +1357,7 @@ const FeeStructureManager: React.FC = () => {
   return (
     <div className="space-y-3">
       {/* Action Buttons, Search and Show per page - ALL IN ONE ROW */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-250 text-xs shadow-sm">
         {/* Left side: Search and Show */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Search Input */}
@@ -1278,12 +1366,12 @@ const FeeStructureManager: React.FC = () => {
             placeholder="Search fee structures..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none w-44"
+            className="px-2.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none w-44 h-7 bg-white"
           />
 
           {/* Show pagination limit */}
-          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-1.5 py-0.5">
-            <span className="text-[10px] text-gray-500 font-semibold uppercase">Show:</span>
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-2 py-0.5 h-7">
+            <span className="text-[10px] text-gray-500 font-bold uppercase">SHOW:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
@@ -1296,18 +1384,36 @@ const FeeStructureManager: React.FC = () => {
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
-              <option value={55}>50</option>
+              <option value={50}>50</option>
               <option value={100}>100</option>
               <option value="all">All</option>
             </select>
           </div>
 
+          {/* Show Trashed Switch Toggle */}
+          <div className="flex items-center gap-2 bg-white border border-gray-300 rounded px-2.5 py-0.5 h-7">
+            <span className="text-xs text-gray-700 font-medium select-none">Show Trashed</span>
+            <button
+              type="button"
+              onClick={() => setViewTrash(prev => !prev)}
+              className={`flex-shrink-0 relative inline-flex h-[16px] w-[32px] items-center rounded-full transition-colors focus:outline-none ${
+                viewTrash ? 'bg-red-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-[10px] w-[10px] transform rounded-full bg-white transition-transform ${
+                  viewTrash ? 'translate-x-[18px]' : 'translate-x-[4px]'
+                }`}
+              />
+            </button>
+          </div>
+
           {(searchTerm || filterAcademicYear || filterClass || filterFeeHead || filterStatus) && (
             <button
               onClick={clearFilters}
-              className="text-xs text-red-500 hover:text-red-700 font-medium"
+              className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded"
             >
-              Clear
+              Clear Filters
             </button>
           )}
         </div>
@@ -1316,17 +1422,17 @@ const FeeStructureManager: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             onClick={downloadSampleFile}
-            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+            className="flex items-center gap-1 px-3 py-1 border border-gray-300 text-gray-700 bg-white rounded hover:bg-gray-50 transition text-xs font-semibold h-7 shadow-sm"
             title="Download Excel Sample Template"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Sample
           </button>
           
-          <label className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition cursor-pointer text-xs font-medium">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <label className="flex items-center gap-1 px-3 py-1 border border-gray-300 text-gray-700 bg-white rounded hover:bg-gray-50 transition cursor-pointer text-xs font-semibold h-7 shadow-sm">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Import
@@ -1335,9 +1441,9 @@ const FeeStructureManager: React.FC = () => {
           
           <button
             onClick={handleExport}
-            className="flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-xs font-medium"
+            className="flex items-center gap-1 px-3 py-1 border border-gray-300 text-gray-700 bg-white rounded hover:bg-gray-50 transition text-xs font-semibold h-7 shadow-sm"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             Export
@@ -1345,12 +1451,12 @@ const FeeStructureManager: React.FC = () => {
           
           <button
             onClick={openAddModal}
-            className="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs font-medium"
+            className="flex items-center gap-1 px-3.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs font-bold h-7 shadow-sm"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add New
+            <span>+ Add New</span>
           </button>
         </div>
       </div>
@@ -1385,26 +1491,54 @@ const FeeStructureManager: React.FC = () => {
 
       {/* Bulk Actions Bar */}
       {selectedItems.size > 0 && (
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 p-2 rounded text-xs text-blue-700">
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 p-2 rounded text-xs text-blue-700 shadow-sm animate-fadeIn">
           <span className="font-semibold">{selectedItems.size} item(s) selected</span>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleBulkStatusUpdate(true)}
-              disabled={bulkUpdating}
-              className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-medium"
-            >
-              {bulkUpdating ? 'Updating...' : 'Mark Active'}
-            </button>
-            <button
-              onClick={() => handleBulkStatusUpdate(false)}
-              disabled={bulkUpdating}
-              className="px-2 py-0.5 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-red-700 font-medium"
-            >
-              {bulkUpdating ? 'Updating...' : 'Mark Inactive'}
-            </button>
+            {!viewTrash ? (
+              <>
+                <button
+                  onClick={() => handleBulkStatusUpdate(true)}
+                  disabled={bulkUpdating}
+                  className="px-2.5 py-1 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-green-700 font-bold text-[10px]"
+                >
+                  {bulkUpdating ? 'Updating...' : 'Mark Active'}
+                </button>
+                <button
+                  onClick={() => handleBulkStatusUpdate(false)}
+                  disabled={bulkUpdating}
+                  className="px-2.5 py-1 bg-white border border-blue-300 rounded hover:bg-blue-100 transition disabled:opacity-50 text-red-700 font-bold text-[10px]"
+                >
+                  {bulkUpdating ? 'Updating...' : 'Mark Inactive'}
+                </button>
+                <button
+                  onClick={handleBulkTrash}
+                  disabled={bulkUpdating}
+                  className="px-2.5 py-1 bg-rose-50 border border-rose-250 rounded hover:bg-rose-100 transition disabled:opacity-50 text-rose-750 font-bold text-[10px]"
+                >
+                  Move to Trash
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleBulkRestore}
+                  disabled={bulkUpdating}
+                  className="px-2.5 py-1 bg-white border border-blue-300 rounded hover:bg-blue-150 transition disabled:opacity-50 text-indigo-755 font-bold text-[10px]"
+                >
+                  Restore Selected
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkUpdating}
+                  className="px-2.5 py-1 bg-rose-50 border border-rose-250 rounded hover:bg-rose-100 transition disabled:opacity-50 text-rose-750 font-bold text-[10px]"
+                >
+                  Delete Permanently
+                </button>
+              </>
+            )}
             <button
               onClick={() => setSelectedItems(new Set())}
-              className="px-2 py-0.5 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+              className="px-2.5 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition font-bold text-[10px]"
             >
               Clear Selection
             </button>
@@ -1425,33 +1559,35 @@ const FeeStructureManager: React.FC = () => {
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
                 />
               </th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('academic_year_label')}>
-                Academic Year {getSortIcon('academic_year_label')}
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-[10px] font-bold text-gray-700" onClick={() => handleSort('academic_year_label')}>
+                <div className="flex items-center gap-0.5">ACADEMIC YEAR {getSortIcon('academic_year_label')}</div>
               </th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('class_name')}>
-                Class {getSortIcon('class_name')}
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-[10px] font-bold text-gray-700" onClick={() => handleSort('class_name')}>
+                <div className="flex items-center gap-0.5">CLASS {getSortIcon('class_name')}</div>
               </th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('fee_head_label')}>
-                Fee Head {getSortIcon('fee_head_label')}
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-[10px] font-bold text-gray-700" onClick={() => handleSort('fee_head_label')}>
+                <div className="flex items-center gap-0.5">FEE HEAD {getSortIcon('fee_head_label')}</div>
               </th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('amount')}>
-                Amount {getSortIcon('amount')}
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-[10px] font-bold text-gray-700" onClick={() => handleSort('amount')}>
+                <div className="flex items-center gap-0.5">AMOUNT {getSortIcon('amount')}</div>
               </th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => handleSort('frequency_label')}>
-                Frequency {getSortIcon('frequency_label')}
+              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-[10px] font-bold text-gray-700" onClick={() => handleSort('frequency_label')}>
+                <div className="flex items-center gap-0.5">FREQUENCY {getSortIcon('frequency_label')}</div>
               </th>
-              <th className="py-2 px-2.5">Due Date</th>
-              <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-center w-28" onClick={() => handleSort('is_active')}>
-                Status {getSortIcon('is_active')}
-              </th>
-              <th className="py-2 px-2.5 w-20 text-center">Actions</th>
+              <th className="py-2 px-2.5 text-[10px] font-bold text-gray-700">DUE DATE</th>
+              {!viewTrash && (
+                <th className="py-2 px-2.5 cursor-pointer hover:bg-gray-100 transition text-center w-28 text-[10px] font-bold text-gray-700" onClick={() => handleSort('is_active')}>
+                  <div className="flex items-center justify-center gap-0.5">STATUS {getSortIcon('is_active')}</div>
+                </th>
+              )}
+              <th className="py-2 px-2.5 w-24 text-center text-[10px] font-bold text-gray-700">ACTIONS</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-6 text-center text-gray-500 font-medium">
-                  No fee structures found.
+                <td colSpan={viewTrash ? 8 : 9} className="py-6 text-center text-gray-500 font-medium">
+                  {viewTrash ? 'Trash bin is empty' : 'No fee structures found.'}
                 </td>
               </tr>
             ) : (
@@ -1475,29 +1611,53 @@ const FeeStructureManager: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-1.5 px-2.5 text-gray-750">{formatDisplayDate(item.due_date) || '-'}</td>
+                  {!viewTrash && (
+                    <td className="py-1.5 px-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <ToggleSwitch
+                          checked={item.is_active}
+                          onChange={() => handleToggleStatus(item.id)}
+                        />
+                        <span className={`text-[10px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                          {item.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </td>
+                  )}
                   <td className="py-1.5 px-2.5 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      <ToggleSwitch
-                        checked={item.is_active}
-                        onChange={() => handleToggleStatus(item.id)}
-                      />
-                      <span className={`text-[10px] font-medium ${item.is_active ? 'text-green-600' : 'text-gray-400'}`}>
-                        {item.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-1.5 px-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button onClick={() => openEditModal(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDelete(item.id, `${getClassName(item.class_id)} - ${getFeeHeadLabel(item.fee_head)}`)} className="p-1 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {!viewTrash ? (
+                        <>
+                          <button onClick={() => openEditModal(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                          <button onClick={() => handleDelete(item.id, `${getClassName(item.class_id)} - ${getFeeHeadLabel(item.fee_head)}`)} className="p-1 text-red-600 hover:bg-red-50 rounded transition" title="Trash">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleRestore(item.id)}
+                            className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-750 font-bold rounded text-[10px] transition hover:bg-indigo-100"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => handleForceDelete(item.id, `${getClassName(item.class_id)} - ${getFeeHeadLabel(item.fee_head)}`)}
+                            className="p-1 text-red-650 hover:bg-rose-50 rounded transition"
+                            title="Delete Permanently"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
