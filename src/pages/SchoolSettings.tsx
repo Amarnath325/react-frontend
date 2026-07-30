@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import AcademicYearManager from '../components/Academic/AcademicYearManager';
 import FeeStructureManager from '../components/FeeStructureManager';
 import ExaminationManager from '../components/Examination/ExaminationManager';
 import DepartmentManager from '../components/Academic/DepartmentManager';
+import SystemThemeManager from '../components/Admin/SystemThemeManager';
 
 interface SchoolProfile {
   // Basic Information
@@ -66,8 +66,7 @@ interface MasterData {
 }
 
 const SchoolSettings: React.FC = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [activeProfileTab, setActiveProfileTab] = useState('general');
   const [saving, setSaving] = useState(false);
@@ -266,46 +265,13 @@ const SchoolSettings: React.FC = () => {
     }
   };
 
-  const addFeeStructure = async () => {
-    if (!newFeeStructure.class_name || !newFeeStructure.fee_head || !newFeeStructure.amount) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    try {
-      const response = await api.post('/school/fee-structures', newFeeStructure);
-      if (response.data.success) {
-        toast.success('Fee structure added successfully');
-        setFeeStructures([...feeStructures, response.data.data]);
-        setNewFeeStructure({ class_name: '', fee_head: '', amount: 0, frequency: 'monthly' });
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add fee structure');
-    }
-  };
-
-  const addExamination = async () => {
-    if (!newExamination.exam_name || !newExamination.exam_type) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    try {
-      const response = await api.post('/school/examinations', newExamination);
-      if (response.data.success) {
-        toast.success('Examination added successfully');
-        setExaminations([...examinations, response.data.data]);
-        setNewExamination({ exam_name: '', exam_type: '', max_marks: 100, passing_marks: 33, term: 'first' });
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add examination');
-    }
-  };
-
   const cards = [
     { id: 'profile', title: 'School Profile', icon: '🏫', description: 'Manage school school profile', color: 'bg-[#558fed]' },
     { id: 'academic', title: 'Academic Years', icon: '📅', description: 'Manage academic sessions', color: 'bg-[#4e74b1]' },
     { id: 'fee', title: 'Fee Structure', icon: '💰', description: 'Manage fee categories', color: 'bg-[#b4a67a]' },
     { id: 'exam', title: 'Examination System', icon: '📝', description: 'Manage exam settings', color: 'bg-[#9889a5]' },
     { id: 'department', title: 'Departments', icon: '🏢', description: 'Manage school departments', color: 'bg-[#4ca1af]' },
+    { id: 'appearance', title: 'Theme & Page Size', icon: '🎨', description: 'Customize page size, density & theme mode', color: 'bg-[#8e44ad]' },
   ];
 
   const profileTabs = [
@@ -695,6 +661,25 @@ const SchoolSettings: React.FC = () => {
           </div>
           <div className="p-3 overflow-visible">
             <DepartmentManager />
+          </div>
+        </div>
+      )}
+
+      {/* ========== SYSTEM THEME & PAGE SIZE CUSTOMIZATION ========== */}
+      {openedCards.includes('appearance') && (
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${activeCard === 'appearance' ? '' : 'hidden'}`}>
+          <div className="px-4 py-3 bg-gradient-to-r from-[#8e44ad] to-[#3498db] text-white flex justify-between items-center">
+            <div>
+              <h2 className="text-[14px] font-semibold flex items-center gap-2">🎨 System Theme & Page Customization</h2>
+            </div>
+            <button onClick={() => setActiveCard(null)} className="text-white hover:text-gray-200 cursor-pointer">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-3 overflow-visible">
+            <SystemThemeManager />
           </div>
         </div>
       )}

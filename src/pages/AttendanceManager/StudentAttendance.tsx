@@ -1,6 +1,5 @@
-import React from 'react';
-import AttendanceHub from './AttendanceHub';
+import StudentAttendanceRegistry from './StudentAttendanceRegistry';
 
 export default function StudentAttendance() {
-  return <AttendanceHub />;
+  return <StudentAttendanceRegistry />;
 }

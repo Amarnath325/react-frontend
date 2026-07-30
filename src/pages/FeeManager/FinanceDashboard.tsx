@@ -43,7 +43,7 @@ export default function FinanceDashboard() {
     due_students_count: 142
   });
 
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([
+  const [recentActivities] = useState<RecentActivity[]>([
     { id: 1, type: 'Receipt', title: 'Student Fee Counter Collection (Rahul Sharma - Class 10)', reference_no: 'RCP-2026-8891', amount: 12500.00, date: 'Today, 02:45 PM', status: 'Completed' },
     { id: 2, type: 'Expense', title: 'Teacher & Staff Monthly Payroll Disbursement', reference_no: 'EXP-2026-041', amount: 250000.00, date: 'Today, 11:30 AM', status: 'Verified' },
     { id: 3, type: 'Cash Book', title: 'Petty Cash Refreshment & Postage Expense', reference_no: 'CSH-VOU-109', amount: 1250.00, date: 'Yesterday, 04:15 PM', status: 'Completed' },

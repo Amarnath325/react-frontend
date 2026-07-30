@@ -1,6 +1,6 @@
-import React from 'react';
-import AttendanceHub from './AttendanceHub';
+import PeriodWiseAttendanceRegistry from './PeriodWiseAttendanceRegistry';
 
 export default function PeriodWiseAttendance() {
-  return <AttendanceHub />;
+  return <PeriodWiseAttendanceRegistry />;
 }
+

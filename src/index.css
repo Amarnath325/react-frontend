@@ -1,13 +1,164 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 @layer base {
+  :root {
+    --primary-accent-color: #4f46e5;
+    --base-font-size: 12px;
+    --table-cell-padding: 6px;
+    --page-container-width: 100%;
+    --theme-border-radius: 12px;
+  }
+
   body {
-    @apply font-sans text-slate-800 antialiased bg-slate-50/50;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #334155;
+    background-color: rgba(248, 250, 252, 0.5);
+    transition-property: color, background-color;
+    transition-duration: 200ms;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 🌙 Dark Mode Body */
+  html.dark body {
+    background-color: #020617;
+    color: #f1f5f9;
+  }
+
+  /* 🖤 High Contrast Black Theme Body */
+  html[data-theme-mode="high_contrast"] body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  /* 🌌 Midnight Cyberpunk Theme Body */
+  html[data-theme-mode="midnight_cyberpunk"] body {
+    background-color: #0b0f19 !important;
+    color: #e2e8f0 !important;
+  }
+
+  /* 📜 Warm Sepia Eye-Care Theme Body */
+  html[data-theme-mode="sepia_warm"] body {
+    background-color: #fbf0d9 !important;
+    color: #433422 !important;
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL THEME OVERRIDES FOR CARDS, MODALS, TABLES & LABELS
+   ───────────────────────────────────────────────────────────── */
+
+/* 🌙 Dark Mode / High Contrast / Cyberpunk Global Element Overrides */
+html.dark .bg-white,
+html[data-theme-mode="high_contrast"] .bg-white,
+html[data-theme-mode="midnight_cyberpunk"] .bg-white {
+  background-color: #1e293b !important; /* slate-800 */
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-gray-50,
+html[data-theme-mode="high_contrast"] .bg-slate-50,
+html[data-theme-mode="high_contrast"] .bg-gray-50,
+html[data-theme-mode="midnight_cyberpunk"] .bg-slate-50,
+html[data-theme-mode="midnight_cyberpunk"] .bg-gray-50 {
+  background-color: #0f172a !important; /* slate-900 */
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html[data-theme-mode="high_contrast"] .text-gray-900,
+html[data-theme-mode="high_contrast"] .text-gray-800,
+html[data-theme-mode="midnight_cyberpunk"] .text-gray-900,
+html[data-theme-mode="midnight_cyberpunk"] .text-gray-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-gray-500,
+html[data-theme-mode="high_contrast"] .text-gray-600,
+html[data-theme-mode="midnight_cyberpunk"] .text-gray-600,
+html[data-theme-mode="midnight_cyberpunk"] .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-gray-100,
+html[data-theme-mode="high_contrast"] .border-gray-200,
+html[data-theme-mode="midnight_cyberpunk"] .border-gray-200,
+html[data-theme-mode="midnight_cyberpunk"] .border-gray-300 {
+  border-color: #334155 !important;
+}
+
+/* 📜 Warm Sepia Eye-Care Global Overrides */
+html[data-theme-mode="sepia_warm"] .bg-white {
+  background-color: #f4e8c1 !important;
+  color: #433422 !important;
+  border-color: #e2d5b6 !important;
+}
+
+html[data-theme-mode="sepia_warm"] .bg-slate-50,
+html[data-theme-mode="sepia_warm"] .bg-gray-50 {
+  background-color: #ebdcb1 !important;
+  color: #433422 !important;
+}
+
+html[data-theme-mode="sepia_warm"] .text-gray-900,
+html[data-theme-mode="sepia_warm"] .text-gray-800,
+html[data-theme-mode="sepia_warm"] .text-gray-700 {
+  color: #382a1b !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL PRIMARY ACCENT COLOR BINDING (BUTTONS, LINKS & BADGES)
+   ───────────────────────────────────────────────────────────── */
+.bg-indigo-600,
+.bg-indigo-700,
+.bg-indigo-800,
+.bg-indigo-900,
+.bg-blue-600,
+.bg-blue-700 {
+  background-color: var(--primary-accent-color) !important;
+}
+
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-800,
+.text-indigo-900,
+.text-blue-600,
+.text-blue-700 {
+  color: var(--primary-accent-color) !important;
+}
+
+.border-indigo-600,
+.border-indigo-700,
+.border-indigo-800,
+.border-blue-600 {
+  border-color: var(--primary-accent-color) !important;
+}
+
+.ring-indigo-600,
+.ring-indigo-500 {
+  --tw-ring-color: var(--primary-accent-color) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL DYNAMIC TABLE PADDING & BORDER RADIUS
+   ───────────────────────────────────────────────────────────── */
+table th, table td {
+  padding-top: var(--table-cell-padding) !important;
+  padding-bottom: var(--table-cell-padding) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--theme-border-radius) !important;
+}
 
 /* Custom Scrollbar for premium layouts */
 .custom-scrollbar::-webkit-scrollbar {
@@ -18,11 +169,11 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: #cbd5e1;
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: #94a3b8;
 }
 
 /* Custom Scrollbar for dark components */
@@ -34,9 +185,9 @@
   background: transparent;
 }
 .custom-scrollbar-dark::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.15); /* slate-400 with opacity */
+  background: rgba(148, 163, 184, 0.15);
   border-radius: 4px;
 }
 .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.3); /* slate-400 with opacity hover */
+  background: rgba(148, 163, 184, 0.3);
 }

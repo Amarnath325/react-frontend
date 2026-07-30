@@ -62,6 +62,10 @@ import AbsentManagement from './pages/AttendanceManager/AbsentManagement';
 import AttendanceNotification from './pages/AttendanceManager/AttendanceNotification';
 import AttendanceReports from './pages/AttendanceManager/AttendanceReports';
 import AttendanceAnalytics from './pages/AttendanceManager/AttendanceAnalytics';
+import ShiftPolicyList from './pages/AttendanceManager/Setting/ShiftPolicyList';
+import ShiftPolicyForm from './pages/AttendanceManager/Setting/ShiftPolicyForm';
+import BranchList from './pages/AttendanceManager/Setting/BranchList';
+import BranchForm from './pages/AttendanceManager/Setting/BranchForm';
 
 // Teacher & Staff Management Pages Imports
 import StaffDashboard from './pages/TeacherStaff/Dashboard';
@@ -216,6 +220,7 @@ import BankManagement from './pages/FeeManager/BankManagement';
 import CashBook from './pages/FeeManager/CashBook';
 import BudgetManagement from './pages/FeeManager/BudgetManagement';
 import FinanceReports from './pages/FeeManager/FinanceReports';
+import UserManagement from './pages/UserManagement/UserManagement';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -851,6 +856,78 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <AttendanceConfiguration />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/shift-policy"
+        element={
+          <ProtectedRouteWithLayout>
+            <ShiftPolicyList />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/shift-policy/create"
+        element={
+          <ProtectedRouteWithLayout>
+            <ShiftPolicyForm />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/shift-policy/edit/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <ShiftPolicyForm />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/shift-policy/copy/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <ShiftPolicyForm />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/holiday-policy"
+        element={
+          <ProtectedRouteWithLayout>
+            <HolidayManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/weekly-policy"
+        element={
+          <ProtectedRouteWithLayout>
+            <WeekoffManager />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/branch"
+        element={
+          <ProtectedRouteWithLayout>
+            <BranchList />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/branch/create"
+        element={
+          <ProtectedRouteWithLayout>
+            <BranchForm />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/attendance/settings/branch/edit/:id"
+        element={
+          <ProtectedRouteWithLayout>
+            <BranchForm />
           </ProtectedRouteWithLayout>
         }
       />
@@ -2327,10 +2404,7 @@ function AppContent() {
         path="/admin/users"
         element={
           <ProtectedRouteWithLayout>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">User Management</h1>
-              <p className="text-gray-600">Manage system users</p>
-            </div>
+            <UserManagement />
           </ProtectedRouteWithLayout>
         }
       />
