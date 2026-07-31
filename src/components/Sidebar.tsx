@@ -3,6 +3,52 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { checkUserPermission } from '../utils/permissionHelpers';
+import {
+  ShieldCheck, Bus, Building, BookOpen, DollarSign, Bell,
+  Crown, Zap, FileText, Database, Folder
+} from 'lucide-react';
+
+const renderSidebarIcon = (icon: string) => {
+  switch (icon) {
+    case 'ShieldCheck':
+    case 'ShieldAlert':
+    case 'Shield':
+    case '🛡️':
+      return <ShieldCheck className="w-4 h-4 text-blue-400 flex-shrink-0" />;
+    case 'Bus':
+    case '🚌':
+      return <Bus className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+    case 'Building':
+    case '🏢':
+      return <Building className="w-4 h-4 text-purple-400 flex-shrink-0" />;
+    case 'BookOpen':
+    case '📚':
+      return <BookOpen className="w-4 h-4 text-sky-400 flex-shrink-0" />;
+    case 'DollarSign':
+    case '💼':
+      return <DollarSign className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
+    case 'Bell':
+    case '📢':
+      return <Bell className="w-4 h-4 text-rose-400 flex-shrink-0" />;
+    case 'Crown':
+    case '👑':
+      return <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+    case 'Zap':
+    case '⚡':
+      return <Zap className="w-4 h-4 text-yellow-400 flex-shrink-0" />;
+    case 'FileText':
+    case '📜':
+      return <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />;
+    case 'Database':
+    case '💾':
+      return <Database className="w-4 h-4 text-cyan-400 flex-shrink-0" />;
+    default:
+      if (icon && icon.length <= 2) {
+        return <span className="text-sm leading-none flex-shrink-0">{icon}</span>;
+      }
+      return <Folder className="w-4 h-4 text-slate-400 flex-shrink-0" />;
+  }
+};
 
 interface MenuItem {
   menu_id: number;
@@ -253,6 +299,15 @@ const routePermissionMap: { [key: string]: string } = {
   // Security & Authentication Center
   '/admin/security': 'view_dashboard',
   '/security/settings': 'view_dashboard',
+
+  // Enterprise Modules
+  '/admin/transport': 'view_dashboard',
+  '/admin/hostel': 'view_dashboard',
+  '/admin/library': 'view_dashboard',
+  '/admin/payroll': 'view_dashboard',
+  '/payroll/dashboard': 'view_dashboard',
+  '/admin/notices': 'view_dashboard',
+  '/notices/dashboard': 'view_dashboard',
 };
 
 const Sidebar: React.FC = () => {
@@ -346,9 +401,22 @@ const Sidebar: React.FC = () => {
       children: childMenus.filter(child => child.menu_p_id === parent.menu_id)
     }));
 
-    // Ensure System & Security Admin Menu exists
-    const hasSysAdmin = hierarchy.some(m => m.menu_name === 'System & Security' || m.children?.some(c => c.menu_route === '/admin/security'));
-    if (!hasSysAdmin) {
+    const requiredEnterpriseSubs = [
+      { menu_id: 9991, menu_p_id: 9990, menu_name: 'Subscriptions & Plans', menu_icon: 'Crown', menu_route: '/admin/subscriptions', menu_sequence: 1 },
+      { menu_id: 9992, menu_p_id: 9990, menu_name: 'API & Developer Portal', menu_icon: 'Zap', menu_route: '/admin/api', menu_sequence: 2 },
+      { menu_id: 9993, menu_p_id: 9990, menu_name: 'Audit & System Logs', menu_icon: 'FileText', menu_route: '/admin/logs', menu_sequence: 3 },
+      { menu_id: 9994, menu_p_id: 9990, menu_name: 'Database & Backups', menu_icon: 'Database', menu_route: '/admin/database', menu_sequence: 4 },
+      { menu_id: 9995, menu_p_id: 9990, menu_name: 'Security & Auth Center', menu_icon: 'ShieldCheck', menu_route: '/admin/security', menu_sequence: 5 },
+      { menu_id: 9996, menu_p_id: 9990, menu_name: 'Transport & Fleet', menu_icon: 'Bus', menu_route: '/admin/transport', menu_sequence: 6 },
+      { menu_id: 9997, menu_p_id: 9990, menu_name: 'Hostel & Mess', menu_icon: 'Building', menu_route: '/admin/hostel', menu_sequence: 7 },
+      { menu_id: 9998, menu_p_id: 9990, menu_name: 'Digital Library', menu_icon: 'BookOpen', menu_route: '/admin/library', menu_sequence: 8 },
+      { menu_id: 9999, menu_p_id: 9990, menu_name: 'Staff Payroll & HR', menu_icon: 'DollarSign', menu_route: '/admin/payroll', menu_sequence: 9 },
+      { menu_id: 10000, menu_p_id: 9990, menu_name: 'Notice Board', menu_icon: 'Bell', menu_route: '/admin/notices', menu_sequence: 10 },
+    ];
+
+    const sysAdminMenu = hierarchy.find(m => m.menu_name === 'System & Security' || m.children?.some(c => c.menu_route === '/admin/security'));
+
+    if (!sysAdminMenu) {
       hierarchy.push({
         menu_id: 9990,
         menu_p_id: null,
@@ -356,13 +424,16 @@ const Sidebar: React.FC = () => {
         menu_icon: '🛡️',
         menu_route: '#',
         menu_sequence: 999,
-        children: [
-          { menu_id: 9991, menu_p_id: 9990, menu_name: 'Subscriptions & Plans', menu_icon: '👑', menu_route: '/admin/subscriptions', menu_sequence: 1 },
-          { menu_id: 9992, menu_p_id: 9990, menu_name: 'API & Developer Portal', menu_icon: '⚡', menu_route: '/admin/api', menu_sequence: 2 },
-          { menu_id: 9993, menu_p_id: 9990, menu_name: 'Audit & System Logs', menu_icon: '📜', menu_route: '/admin/logs', menu_sequence: 3 },
-          { menu_id: 9994, menu_p_id: 9990, menu_name: 'Database & Backups', menu_icon: '💾', menu_route: '/admin/database', menu_sequence: 4 },
-          { menu_id: 9995, menu_p_id: 9990, menu_name: 'Security & Auth Center', menu_icon: '🛡️', menu_route: '/admin/security', menu_sequence: 5 },
-        ]
+        children: requiredEnterpriseSubs
+      });
+    } else {
+      // Merge any missing enterprise submenus
+      const existingRoutes = (sysAdminMenu.children || []).map(c => c.menu_route);
+      requiredEnterpriseSubs.forEach(sub => {
+        if (!existingRoutes.includes(sub.menu_route)) {
+          sysAdminMenu.children = sysAdminMenu.children || [];
+          sysAdminMenu.children.push(sub);
+        }
       });
     }
 
@@ -434,7 +505,7 @@ const Sidebar: React.FC = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed lg:relative z-50 w-64 bg-slate-950 text-slate-100 flex flex-col transition-transform duration-300 ease-in-out h-full border-r border-slate-900/60 ${
+        className={`fixed lg:relative z-50 w-72 bg-slate-950 text-slate-100 flex flex-col transition-transform duration-300 ease-in-out h-full border-r border-slate-900/60 ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } lg:translate-x-0`}
       >
@@ -485,7 +556,7 @@ const Sidebar: React.FC = () => {
                           : 'text-slate-400 hover:bg-slate-900/30 hover:text-slate-200'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {menu.children.some(child => location.pathname === child.menu_route) && (
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-md shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                         )}
@@ -494,9 +565,9 @@ const Sidebar: React.FC = () => {
                             ? 'scale-110 opacity-100'
                             : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'
                         }`}>
-                          {menu.menu_icon}
+                          {renderSidebarIcon(menu.menu_icon)}
                         </span>
-                        <span className="text-[13px] font-semibold tracking-wide">{menu.menu_name}</span>
+                        <span className="text-[13px] font-semibold tracking-wide truncate whitespace-nowrap">{menu.menu_name}</span>
                       </div>
                       <svg
                         className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
@@ -533,9 +604,9 @@ const Sidebar: React.FC = () => {
                                 <span className={`text-[13px] flex-shrink-0 transition-transform duration-200 ${
                                   isActive ? 'scale-110 opacity-100' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'
                                 }`}>
-                                  {child.menu_icon}
+                                  {renderSidebarIcon(child.menu_icon)}
                                 </span>
-                                <span className="text-xs font-semibold tracking-wide">{child.menu_name}</span>
+                                <span className="text-xs font-semibold tracking-wide truncate whitespace-nowrap">{child.menu_name}</span>
                               </>
                             )}
                           </NavLink>
@@ -563,9 +634,9 @@ const Sidebar: React.FC = () => {
                         <span className={`text-[15px] flex-shrink-0 transition-transform duration-200 ${
                           isActive ? 'scale-110 opacity-100' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'
                         }`}>
-                          {menu.menu_icon}
+                          {renderSidebarIcon(menu.menu_icon)}
                         </span>
-                        <span className="text-[13px] font-semibold tracking-wide">{menu.menu_name}</span>
+                        <span className="text-[13px] font-semibold tracking-wide truncate whitespace-nowrap">{menu.menu_name}</span>
                       </>
                     )}
                   </NavLink>

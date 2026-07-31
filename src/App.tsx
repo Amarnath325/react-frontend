@@ -235,6 +235,11 @@ import FeaturesPage from './pages/Frontend/FeaturesPage';
 import PricingPage from './pages/Frontend/PricingPage';
 import ContactPage from './pages/Frontend/ContactPage';
 import AdmissionInquiryPage from './pages/Frontend/AdmissionInquiryPage';
+import TransportManagementPage from './pages/Transport/TransportManagementPage';
+import HostelManagementPage from './pages/Hostel/HostelManagementPage';
+import LibraryManagementPage from './pages/Library/LibraryManagementPage';
+import PayrollManagementPage from './pages/Payroll/PayrollManagementPage';
+import NoticeBoardPage from './pages/NoticeBoard/NoticeBoardPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -2568,6 +2573,96 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout>
             <SecurityManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Transport & Fleet Management ── */}
+      <Route
+        path="/admin/transport"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/transport/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <TransportManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Hostel & Mess Management ── */}
+      <Route
+        path="/admin/hostel"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/hostel/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <HostelManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Digital Library & Inventory ── */}
+      <Route
+        path="/admin/library"
+        element={
+          <ProtectedRouteWithLayout>
+            <LibraryManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/library/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <LibraryManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Staff Payroll & HRMS Generator ── */}
+      <Route
+        path="/admin/payroll"
+        element={
+          <ProtectedRouteWithLayout>
+            <PayrollManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/payroll/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <PayrollManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Notice Board & Announcements ── */}
+      <Route
+        path="/admin/notices"
+        element={
+          <ProtectedRouteWithLayout>
+            <NoticeBoardPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/notices/dashboard"
+        element={
+          <ProtectedRouteWithLayout>
+            <NoticeBoardPage />
           </ProtectedRouteWithLayout>
         }
       />
