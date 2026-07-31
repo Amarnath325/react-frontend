@@ -249,6 +249,10 @@ const routePermissionMap: { [key: string]: string } = {
   '/admin/database': 'view_dashboard',
   '/admin/backups': 'view_dashboard',
   '/admin/backup': 'view_dashboard',
+
+  // Security & Authentication Center
+  '/admin/security': 'view_dashboard',
+  '/security/settings': 'view_dashboard',
 };
 
 const Sidebar: React.FC = () => {
@@ -336,11 +340,33 @@ const Sidebar: React.FC = () => {
   const buildMenuHierarchy = (menus: any[]): MenuItem[] => {
     const parentMenus = menus.filter(menu => !menu.menu_p_id);
     const childMenus = menus.filter(menu => menu.menu_p_id);
-    
-    return parentMenus.map(parent => ({
+
+    const hierarchy: MenuItem[] = parentMenus.map(parent => ({
       ...parent,
       children: childMenus.filter(child => child.menu_p_id === parent.menu_id)
     }));
+
+    // Ensure System & Security Admin Menu exists
+    const hasSysAdmin = hierarchy.some(m => m.menu_name === 'System & Security' || m.children?.some(c => c.menu_route === '/admin/security'));
+    if (!hasSysAdmin) {
+      hierarchy.push({
+        menu_id: 9990,
+        menu_p_id: null,
+        menu_name: 'System & Security',
+        menu_icon: '🛡️',
+        menu_route: '#',
+        menu_sequence: 999,
+        children: [
+          { menu_id: 9991, menu_p_id: 9990, menu_name: 'Subscriptions & Plans', menu_icon: '👑', menu_route: '/admin/subscriptions', menu_sequence: 1 },
+          { menu_id: 9992, menu_p_id: 9990, menu_name: 'API & Developer Portal', menu_icon: '⚡', menu_route: '/admin/api', menu_sequence: 2 },
+          { menu_id: 9993, menu_p_id: 9990, menu_name: 'Audit & System Logs', menu_icon: '📜', menu_route: '/admin/logs', menu_sequence: 3 },
+          { menu_id: 9994, menu_p_id: 9990, menu_name: 'Database & Backups', menu_icon: '💾', menu_route: '/admin/database', menu_sequence: 4 },
+          { menu_id: 9995, menu_p_id: 9990, menu_name: 'Security & Auth Center', menu_icon: '🛡️', menu_route: '/admin/security', menu_sequence: 5 },
+        ]
+      });
+    }
+
+    return hierarchy;
   };
 
   const toggleMenu = (menuId: number) => {

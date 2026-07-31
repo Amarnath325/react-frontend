@@ -227,6 +227,8 @@ import MySubscriptionPage from './pages/Subscription/MySubscriptionPage';
 import ApiManagementPage from './pages/Admin/ApiManagementPage';
 import SystemLogsPage from './pages/Admin/SystemLogsPage';
 import DatabaseManagementPage from './pages/Admin/DatabaseManagementPage';
+import SecurityManagementPage from './pages/Admin/SecurityManagementPage';
+import SessionLockModal from './components/SessionLockModal';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -2538,6 +2540,24 @@ function AppContent() {
         }
       />
 
+      {/* ── Security & Authentication Center ── */}
+      <Route
+        path="/admin/security"
+        element={
+          <ProtectedRouteWithLayout>
+            <SecurityManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/security/settings"
+        element={
+          <ProtectedRouteWithLayout>
+            <SecurityManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
       {/* END OF ROUTES */}
     </Routes>
   );
@@ -2548,6 +2568,7 @@ function App() {
     <Router>
       <AuthProvider>
         <Toaster position="top-right" />
+        <SessionLockModal />
         <AppContent />
       </AuthProvider>
     </Router>
