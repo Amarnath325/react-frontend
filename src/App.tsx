@@ -229,6 +229,12 @@ import SystemLogsPage from './pages/Admin/SystemLogsPage';
 import DatabaseManagementPage from './pages/Admin/DatabaseManagementPage';
 import SecurityManagementPage from './pages/Admin/SecurityManagementPage';
 import SessionLockModal from './components/SessionLockModal';
+import HomePage from './pages/Frontend/HomePage';
+import AboutPage from './pages/Frontend/AboutPage';
+import FeaturesPage from './pages/Frontend/FeaturesPage';
+import PricingPage from './pages/Frontend/PricingPage';
+import ContactPage from './pages/Frontend/ContactPage';
+import AdmissionInquiryPage from './pages/Frontend/AdmissionInquiryPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -317,7 +323,15 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      {/* ── Public Website & Landing Pages ── */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/admission-inquiry" element={<AdmissionInquiryPage />} />
+
       <Route path="/register" element={<SchoolRegistration />} />
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
       
