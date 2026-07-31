@@ -221,6 +221,12 @@ import CashBook from './pages/FeeManager/CashBook';
 import BudgetManagement from './pages/FeeManager/BudgetManagement';
 import FinanceReports from './pages/FeeManager/FinanceReports';
 import UserManagement from './pages/UserManagement/UserManagement';
+import SubscriptionPlansPage from './pages/Subscription/SubscriptionPlansPage';
+import SubscriptionManagementPage from './pages/Subscription/SubscriptionManagementPage';
+import MySubscriptionPage from './pages/Subscription/MySubscriptionPage';
+import ApiManagementPage from './pages/Admin/ApiManagementPage';
+import SystemLogsPage from './pages/Admin/SystemLogsPage';
+import DatabaseManagementPage from './pages/Admin/DatabaseManagementPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -2414,6 +2420,120 @@ function AppContent() {
         element={
           <ProtectedRouteWithLayout permission="view_roles">
             <RolePermissionPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Subscription Module ── */}
+      <Route
+        path="/subscription/plans"
+        element={
+          <ProtectedRouteWithLayout>
+            <SubscriptionPlansPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/subscription/management"
+        element={
+          <ProtectedRouteWithLayout>
+            <SubscriptionManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/subscription/my-plan"
+        element={
+          <ProtectedRouteWithLayout>
+            <MySubscriptionPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* Subscription alias routes — matches any sidebar menu_route pointing to /admin/subscription* */}
+      <Route
+        path="/admin/subscriptions"
+        element={
+          <ProtectedRouteWithLayout>
+            <SubscriptionManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/admin/subscription-plans"
+        element={
+          <ProtectedRouteWithLayout>
+            <SubscriptionPlansPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/admin/my-subscription"
+        element={
+          <ProtectedRouteWithLayout>
+            <MySubscriptionPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── API Management & Developer Portal ── */}
+      <Route
+        path="/admin/api"
+        element={
+          <ProtectedRouteWithLayout>
+            <ApiManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/api/management"
+        element={
+          <ProtectedRouteWithLayout>
+            <ApiManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── System Audit & Activity Logs ── */}
+      <Route
+        path="/admin/logs"
+        element={
+          <ProtectedRouteWithLayout>
+            <SystemLogsPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/admin/system-logs"
+        element={
+          <ProtectedRouteWithLayout>
+            <SystemLogsPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+
+      {/* ── Database Management & Backup Utility ── */}
+      <Route
+        path="/admin/database"
+        element={
+          <ProtectedRouteWithLayout>
+            <DatabaseManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/admin/backups"
+        element={
+          <ProtectedRouteWithLayout>
+            <DatabaseManagementPage />
+          </ProtectedRouteWithLayout>
+        }
+      />
+      <Route
+        path="/admin/backup"
+        element={
+          <ProtectedRouteWithLayout>
+            <DatabaseManagementPage />
           </ProtectedRouteWithLayout>
         }
       />

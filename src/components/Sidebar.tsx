@@ -230,6 +230,25 @@ const routePermissionMap: { [key: string]: string } = {
   '/admin/settings': 'manage_library_settings',
   '/admin/users': 'assign_user_roles',
   '/admin/roles': 'view_roles',
+
+  // Subscription Management
+  '/admin/subscriptions': 'view_dashboard',
+  '/subscription/plans': 'view_dashboard',
+  '/subscription/management': 'view_dashboard',
+  '/subscription/my-plan': 'view_dashboard',
+
+  // API Management & Developer Portal
+  '/admin/api': 'view_dashboard',
+  '/api/management': 'view_dashboard',
+
+  // System Audit & Activity Logs
+  '/admin/logs': 'view_dashboard',
+  '/admin/system-logs': 'view_dashboard',
+
+  // Database Management & Backup Utility
+  '/admin/database': 'view_dashboard',
+  '/admin/backups': 'view_dashboard',
+  '/admin/backup': 'view_dashboard',
 };
 
 const Sidebar: React.FC = () => {
