@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { School, LogIn, Phone, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
+import { School, LogIn, Phone, Menu, X, ArrowRight, Sparkles, Database } from 'lucide-react';
+import SchoolOnboardingModal from '../Landlord/SchoolOnboardingModal';
 
 export default function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
   const location = useLocation();
 
   const navLinks = [
@@ -56,6 +58,9 @@ export default function PublicNavbar() {
 
           {/* CTA Buttons */}
           <div className="hidden sm:flex items-center gap-2">
+            <button onClick={() => setShowOnboardModal(true)} className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition-all">
+              <Database className="w-3.5 h-3.5" /> Provision School DB
+            </button>
             <Link to="/login" className="px-4 py-2 border border-slate-700 hover:bg-slate-900 text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all">
               <LogIn className="w-4 h-4 text-blue-400" /> Portal Login
             </Link>
@@ -90,6 +95,8 @@ export default function PublicNavbar() {
           </div>
         </div>
       )}
+
+      <SchoolOnboardingModal isOpen={showOnboardModal} onClose={() => setShowOnboardModal(false)} />
     </header>
   );
 }
