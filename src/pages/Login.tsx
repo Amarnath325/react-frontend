@@ -97,6 +97,10 @@ const Login: React.FC = () => {
             Register New School
           </Link>
 
+          <Link to="/superadmin/login" className="text-amber-600 hover:text-amber-700 font-extrabold flex items-center gap-1">
+            👑 Super Admin Portal
+          </Link>
+
           <Link to="/home" className="text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1">
             <Home className="w-3.5 h-3.5 text-blue-500" /> Public Website
           </Link>

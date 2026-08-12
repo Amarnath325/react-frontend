@@ -301,6 +301,8 @@ const routePermissionMap: { [key: string]: string } = {
   '/security/settings': 'view_dashboard',
 
   // Enterprise Modules
+  '/superadmin': 'view_dashboard',
+  '/superadmin/dashboard': 'view_dashboard',
   '/admin/transport': 'view_dashboard',
   '/admin/hostel': 'view_dashboard',
   '/admin/library': 'view_dashboard',
@@ -402,6 +404,7 @@ const Sidebar: React.FC = () => {
     }));
 
     const requiredEnterpriseSubs = [
+      { menu_id: 9989, menu_p_id: 9990, menu_name: 'Super Admin Panel', menu_icon: 'Crown', menu_route: '/superadmin/dashboard', menu_sequence: 0 },
       { menu_id: 9991, menu_p_id: 9990, menu_name: 'Subscriptions & Plans', menu_icon: 'Crown', menu_route: '/admin/subscriptions', menu_sequence: 1 },
       { menu_id: 9992, menu_p_id: 9990, menu_name: 'API & Developer Portal', menu_icon: 'Zap', menu_route: '/admin/api', menu_sequence: 2 },
       { menu_id: 9993, menu_p_id: 9990, menu_name: 'Audit & System Logs', menu_icon: 'FileText', menu_route: '/admin/logs', menu_sequence: 3 },

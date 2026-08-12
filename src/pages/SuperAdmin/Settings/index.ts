@@ -1,0 +1,9 @@
+export { default as GlobalSettingsPage } from './GlobalSettingsPage';
+export { default as DefaultSchoolSettingsPage } from './DefaultSchoolSettingsPage';
+export { default as FeatureFlagsPage } from './FeatureFlagsPage';
+export { default as WhiteLabelBrandingPage } from './WhiteLabelBrandingPage';
+export { default as DefaultThemesPage } from './DefaultThemesPage';
+export { default as EmailTemplatesPage } from './EmailTemplatesPage';
+export { default as SmsTemplatesPage } from './SmsTemplatesPage';
+export { default as WhatsAppTemplatesPage } from './WhatsAppTemplatesPage';
+export { default as NotificationTemplatesPage } from './NotificationTemplatesPage';

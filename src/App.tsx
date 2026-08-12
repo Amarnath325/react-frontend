@@ -240,6 +240,163 @@ import HostelManagementPage from './pages/Hostel/HostelManagementPage';
 import LibraryManagementPage from './pages/Library/LibraryManagementPage';
 import PayrollManagementPage from './pages/Payroll/PayrollManagementPage';
 import NoticeBoardPage from './pages/NoticeBoard/NoticeBoardPage';
+import SuperAdminDashboard from './pages/SuperAdmin/SuperAdminDashboard';
+import SuperAdminLogin from './pages/SuperAdmin/SuperAdminLogin';
+import SuperAdminLayout from './components/SuperAdmin/SuperAdminLayout';
+// Tenant Management
+import {
+  TenantsManagementPage,
+  TenantVerificationPage,
+  TenantOnboardingWizardPage,
+  TenantMigrationPage,
+  TenantSuspensionPage,
+  TenantClonePage,
+  TenantArchivePage,
+  TenantDatabaseManagementPage
+} from './pages/SuperAdmin/Tenants';
+// Subscription Plans & SaaS Billing Hub
+import {
+  SaaSPlansPage,
+  FeatureManagementPage,
+  PlanAssignmentPage,
+  CouponsPromoCodesPage,
+  FreeTrialManagementPage,
+  SaaSBillingPage,
+  PaymentsPage,
+  RefundManagementPage,
+  TaxGstManagementPage,
+  RevenueAnalyticsPage
+} from './pages/SuperAdmin/Billing';
+// SaaS Configuration
+import {
+  GlobalSettingsPage,
+  DefaultSchoolSettingsPage,
+  FeatureFlagsPage,
+  WhiteLabelBrandingPage,
+  DefaultThemesPage,
+  EmailTemplatesPage,
+  SmsTemplatesPage,
+  WhatsAppTemplatesPage,
+  NotificationTemplatesPage
+} from './pages/SuperAdmin/Settings';
+// Notifications & Mass Communication
+import {
+  BroadcastNotificationsPage,
+  EmailCampaignsPage,
+  SmsBroadcastPage,
+  WhatsAppBroadcastPage,
+  PushNotificationsPage,
+  ScheduledNotificationsPage
+} from './pages/SuperAdmin/Notifications';
+// API, Developer Gateways & Integrations Hub
+import {
+  GlobalApiGatewayPage,
+  ApiKeysPage,
+  WebhooksPage,
+  OAuthClientsPage,
+  RateLimitingPage,
+  PaymentGatewayPage,
+  SmsGatewayPage,
+  WhatsAppGatewayPage,
+  EmailGatewayPage,
+  GoogleServicesPage,
+  FirebaseConfigPage,
+  ThirdPartyIntegrationsPage
+} from './pages/SuperAdmin/Integrations';
+// Platform Monitoring
+import {
+  SystemHealthPage,
+  ServerMonitoringPage,
+  DatabaseMonitoringPage,
+  QueueMonitoringPage,
+  CacheMonitoringPage,
+  StorageMonitoringPage,
+  CronJobsPage,
+  BackgroundJobsPage,
+  LiveStatusPage
+} from './pages/SuperAdmin/Monitoring';
+// Database Management
+import {
+  DatabaseListPage,
+  GlobalDatabaseBackupsPage,
+  RestoreBackupPage,
+  DatabaseSizePage,
+  DatabaseOptimizationPage,
+  DatabaseMigrationPage,
+  CloudStoragePage
+} from './pages/SuperAdmin/Databases';
+// Security Center & Governance
+import {
+  GlobalSecurityCenterPage,
+  AuditLogsPage,
+  LoginLogsPage,
+  FailedLoginAttemptsPage,
+  DeviceManagementPage,
+  SessionManagementPage,
+  IpWhitelistPage,
+  BlacklistedIpPage,
+  SslManagementPage,
+  TwoFactorAuthPage,
+  PasswordPolicyPage,
+  DdosProtectionPage,
+  SecurityAlertsPage,
+  GlobalAdminsPage,
+  GlobalRolesPage,
+  GlobalPermissionsPage,
+  AdminActivityLogsPage,
+  AccessPoliciesPage
+} from './pages/SuperAdmin/Audit';
+// Reports & Analytics
+import {
+  RevenueReportsPage,
+  SubscriptionReportsPage,
+  TenantReportsPage,
+  StudentStatisticsPage,
+  UsageReportsPage,
+  LoginReportsPage,
+  FeatureUsagePage,
+  GrowthAnalyticsPage,
+  ChurnAnalysisPage
+} from './pages/SuperAdmin/Reports';
+// Support Center & Helpdesk
+import {
+  SupportTicketsPage,
+  KnowledgeBasePage,
+  FaqsPage,
+  AnnouncementsPage,
+  MaintenanceModePage,
+  ReleaseNotesPage,
+  ContactRequestsPage
+} from './pages/SuperAdmin/Support';
+// License & Software Distribution Hub
+import {
+  LicenseKeysPage,
+  DomainVerificationPage,
+  InstallationHistoryPage,
+  ActivationLogsPage
+} from './pages/SuperAdmin/Licenses';
+// AI & Automation Management Hub
+import {
+  AiSettingsPage,
+  AiUsageLogsPage,
+  AutoBackupSchedulerPage,
+  AutoBillingPage,
+  AutoSuspensionRulesPage,
+  AutoRenewalPage,
+  WorkflowAutomationPage
+} from './pages/SuperAdmin/Automation';
+// CRM, Marketing Leads & Sales Pipeline Hub
+import {
+  MarketingLeadsPage,
+  DemoRequestsPage,
+  SalesPipelinePage,
+  FollowUpManagementPage,
+  CustomerNotesPage,
+  CustomerSupportPage,
+  TicketEscalationPage
+} from './pages/SuperAdmin/CRM';
+
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -339,6 +496,7 @@ function AppContent() {
 
       <Route path="/register" element={<SchoolRegistration />} />
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+      <Route path="/superadmin/login" element={!isAuthenticated ? <SuperAdminLogin /> : <Navigate to="/superadmin/dashboard" />} />
       
       {/* Protected routes WITH sidebar (Layout) */}
       <Route
@@ -2666,6 +2824,165 @@ function AppContent() {
           </ProtectedRouteWithLayout>
         }
       />
+
+      {/* ── Platform Owner (Global Super Admin) Suite ── */}
+      {/* Dashboard */}
+      <Route path="/superadmin" element={<SuperAdminLayout><SuperAdminDashboard /></SuperAdminLayout>} />
+      <Route path="/superadmin/dashboard" element={<SuperAdminLayout><SuperAdminDashboard /></SuperAdminLayout>} />
+
+      {/* Tenant Management */}
+      <Route path="/superadmin/tenants" element={<SuperAdminLayout><TenantsManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/verification" element={<SuperAdminLayout><TenantVerificationPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/onboarding" element={<SuperAdminLayout><TenantOnboardingWizardPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/migration" element={<SuperAdminLayout><TenantMigrationPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/suspension" element={<SuperAdminLayout><TenantSuspensionPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/clone" element={<SuperAdminLayout><TenantClonePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/archive" element={<SuperAdminLayout><TenantArchivePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/tenants/database" element={<SuperAdminLayout><TenantDatabaseManagementPage /></SuperAdminLayout>} />
+
+      {/* Subscription & Billing */}
+      <Route path="/superadmin/subscriptions" element={<SuperAdminLayout><SaaSPlansPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/subscriptions/features" element={<SuperAdminLayout><FeatureManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/subscriptions/assignment" element={<SuperAdminLayout><PlanAssignmentPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/subscriptions/coupons" element={<SuperAdminLayout><CouponsPromoCodesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/subscriptions/trials" element={<SuperAdminLayout><FreeTrialManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/billing" element={<SuperAdminLayout><SaaSBillingPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/billing/payments" element={<SuperAdminLayout><PaymentsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/billing/refunds" element={<SuperAdminLayout><RefundManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/billing/tax" element={<SuperAdminLayout><TaxGstManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/billing/revenue" element={<SuperAdminLayout><RevenueAnalyticsPage /></SuperAdminLayout>} />
+
+      {/* CRM */}
+      <Route path="/superadmin/crm/inquiries" element={<SuperAdminLayout><MarketingLeadsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/inquiries" element={<SuperAdminLayout><MarketingLeadsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/demos" element={<SuperAdminLayout><DemoRequestsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/pipeline" element={<SuperAdminLayout><SalesPipelinePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/followup" element={<SuperAdminLayout><FollowUpManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/notes" element={<SuperAdminLayout><CustomerNotesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/support" element={<SuperAdminLayout><CustomerSupportPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/escalation" element={<SuperAdminLayout><TicketEscalationPage /></SuperAdminLayout>} />
+
+      {/* SaaS Configuration */}
+      <Route path="/superadmin/config/global" element={<SuperAdminLayout><GlobalSettingsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/school-defaults" element={<SuperAdminLayout><DefaultSchoolSettingsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/feature-flags" element={<SuperAdminLayout><FeatureFlagsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/white-label" element={<SuperAdminLayout><WhiteLabelBrandingPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/themes" element={<SuperAdminLayout><DefaultThemesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/email-templates" element={<SuperAdminLayout><EmailTemplatesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/sms-templates" element={<SuperAdminLayout><SmsTemplatesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/whatsapp-templates" element={<SuperAdminLayout><WhatsAppTemplatesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/config/notification-templates" element={<SuperAdminLayout><NotificationTemplatesPage /></SuperAdminLayout>} />
+
+      {/* API & Integrations */}
+      <Route path="/superadmin/api" element={<SuperAdminLayout><GlobalApiGatewayPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/keys" element={<SuperAdminLayout><ApiKeysPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/webhooks" element={<SuperAdminLayout><WebhooksPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/oauth" element={<SuperAdminLayout><OAuthClientsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/rate-limiting" element={<SuperAdminLayout><RateLimitingPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/payment-gateway" element={<SuperAdminLayout><PaymentGatewayPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/sms-gateway" element={<SuperAdminLayout><SmsGatewayPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/whatsapp-gateway" element={<SuperAdminLayout><WhatsAppGatewayPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/email-gateway" element={<SuperAdminLayout><EmailGatewayPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/firebase" element={<SuperAdminLayout><FirebaseConfigPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/google" element={<SuperAdminLayout><GoogleServicesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/api/third-party" element={<SuperAdminLayout><ThirdPartyIntegrationsPage /></SuperAdminLayout>} />
+
+      {/* Platform Monitoring */}
+      <Route path="/superadmin/monitoring/health" element={<SuperAdminLayout><SystemHealthPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/server" element={<SuperAdminLayout><ServerMonitoringPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/database" element={<SuperAdminLayout><DatabaseMonitoringPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/queue" element={<SuperAdminLayout><QueueMonitoringPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/cache" element={<SuperAdminLayout><CacheMonitoringPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/storage" element={<SuperAdminLayout><StorageMonitoringPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/cron" element={<SuperAdminLayout><CronJobsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/jobs" element={<SuperAdminLayout><BackgroundJobsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/monitoring/live" element={<SuperAdminLayout><LiveStatusPage /></SuperAdminLayout>} />
+
+      {/* Database Management */}
+      <Route path="/superadmin/database/list" element={<SuperAdminLayout><DatabaseListPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database" element={<SuperAdminLayout><GlobalDatabaseBackupsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database/restore" element={<SuperAdminLayout><RestoreBackupPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database/size" element={<SuperAdminLayout><DatabaseSizePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database/optimize" element={<SuperAdminLayout><DatabaseOptimizationPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database/migration" element={<SuperAdminLayout><DatabaseMigrationPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/database/cloud-storage" element={<SuperAdminLayout><CloudStoragePage /></SuperAdminLayout>} />
+
+      {/* Security Center */}
+      <Route path="/superadmin/security" element={<SuperAdminLayout><GlobalSecurityCenterPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/audit-logs" element={<SuperAdminLayout><AuditLogsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/logs" element={<SuperAdminLayout><AuditLogsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/login-logs" element={<SuperAdminLayout><LoginLogsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/failed-logins" element={<SuperAdminLayout><FailedLoginAttemptsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/devices" element={<SuperAdminLayout><DeviceManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/sessions" element={<SuperAdminLayout><SessionManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/ip-whitelist" element={<SuperAdminLayout><IpWhitelistPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/ip-blacklist" element={<SuperAdminLayout><BlacklistedIpPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/ssl" element={<SuperAdminLayout><SslManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/2fa" element={<SuperAdminLayout><TwoFactorAuthPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/password-policy" element={<SuperAdminLayout><PasswordPolicyPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/ddos" element={<SuperAdminLayout><DdosProtectionPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/security/alerts" element={<SuperAdminLayout><SecurityAlertsPage /></SuperAdminLayout>} />
+
+      {/* User & Role Management */}
+      <Route path="/superadmin/users" element={<SuperAdminLayout><GlobalAdminsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/users/roles" element={<SuperAdminLayout><GlobalRolesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/users/permissions" element={<SuperAdminLayout><GlobalPermissionsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/users/activity" element={<SuperAdminLayout><AdminActivityLogsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/users/policies" element={<SuperAdminLayout><AccessPoliciesPage /></SuperAdminLayout>} />
+
+      {/* Reports & Analytics */}
+      <Route path="/superadmin/reports/revenue" element={<SuperAdminLayout><RevenueReportsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/subscriptions" element={<SuperAdminLayout><SubscriptionReportsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/tenants" element={<SuperAdminLayout><TenantReportsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/students" element={<SuperAdminLayout><StudentStatisticsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/usage" element={<SuperAdminLayout><UsageReportsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/logins" element={<SuperAdminLayout><LoginReportsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/features" element={<SuperAdminLayout><FeatureUsagePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/growth" element={<SuperAdminLayout><GrowthAnalyticsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/reports/churn" element={<SuperAdminLayout><ChurnAnalysisPage /></SuperAdminLayout>} />
+
+      {/* Notifications */}
+      <Route path="/superadmin/notifications/broadcast" element={<SuperAdminLayout><BroadcastNotificationsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/notifications/email" element={<SuperAdminLayout><EmailCampaignsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/notifications/sms" element={<SuperAdminLayout><SmsBroadcastPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/notifications/whatsapp" element={<SuperAdminLayout><WhatsAppBroadcastPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/notifications/push" element={<SuperAdminLayout><PushNotificationsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/notifications/scheduled" element={<SuperAdminLayout><ScheduledNotificationsPage /></SuperAdminLayout>} />
+
+      {/* Support Center */}
+      <Route path="/superadmin/support/tickets" element={<SuperAdminLayout><SupportTicketsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/knowledge-base" element={<SuperAdminLayout><KnowledgeBasePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/faqs" element={<SuperAdminLayout><FaqsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/announcements" element={<SuperAdminLayout><AnnouncementsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/maintenance" element={<SuperAdminLayout><MaintenanceModePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/release-notes" element={<SuperAdminLayout><ReleaseNotesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/support/contacts" element={<SuperAdminLayout><ContactRequestsPage /></SuperAdminLayout>} />
+
+      {/* License Management */}
+      <Route path="/superadmin/license/keys" element={<SuperAdminLayout><LicenseKeysPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/license/domain-verification" element={<SuperAdminLayout><DomainVerificationPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/license/installations" element={<SuperAdminLayout><InstallationHistoryPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/license/activations" element={<SuperAdminLayout><ActivationLogsPage /></SuperAdminLayout>} />
+
+      {/* AI & Automation */}
+      <Route path="/superadmin/ai/settings" element={<SuperAdminLayout><AiSettingsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/usage" element={<SuperAdminLayout><AiUsageLogsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/backup-scheduler" element={<SuperAdminLayout><AutoBackupSchedulerPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/auto-billing" element={<SuperAdminLayout><AutoBillingPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/suspension-rules" element={<SuperAdminLayout><AutoSuspensionRulesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/auto-renewal" element={<SuperAdminLayout><AutoRenewalPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/ai/workflows" element={<SuperAdminLayout><WorkflowAutomationPage /></SuperAdminLayout>} />
+
+      {/* CRM, Marketing Leads & Sales Pipeline */}
+      <Route path="/superadmin/crm/marketing-leads" element={<SuperAdminLayout><MarketingLeadsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/demo-requests" element={<SuperAdminLayout><DemoRequestsPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/sales-pipeline" element={<SuperAdminLayout><SalesPipelinePage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/follow-up" element={<SuperAdminLayout><FollowUpManagementPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/customer-notes" element={<SuperAdminLayout><CustomerNotesPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/customer-support" element={<SuperAdminLayout><CustomerSupportPage /></SuperAdminLayout>} />
+      <Route path="/superadmin/crm/ticket-escalation" element={<SuperAdminLayout><TicketEscalationPage /></SuperAdminLayout>} />
+
+
 
       {/* END OF ROUTES */}
     </Routes>
